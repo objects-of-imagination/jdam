@@ -1,0 +1,53 @@
+body {
+  --primary-fg: black;
+  --primary-bg: darkorange;
+
+  --secondary-fg: white;
+  --secondary-bg: var(--grey80);
+
+  --tertiary-fg: white;
+  --tertiary-bg: #3276B5;
+
+  --default-fg: var(--white);
+  --default-bg: var(--grey90);
+
+  --input-fg: var(--white);
+  --input-bg: var(--grey80);
+
+  --element-height: 2.5rem;
+
+  --white: white;
+  --grey10: #F8F8F8;
+  --grey20: #F0F0F0;
+  --grey30: #E0E0E0;
+  --grey40: #C0C0C0;
+  --grey50: #A0A0A0;
+  --grey60: #808080;
+  --grey70: #606060;
+  --grey80: #404040;
+  --grey90: #202020;
+  --black: black;
+  
+  --font-size: 13pt;
+  --padding: 1rem;
+  --border-radius: 0.33rem;
+
+  --icon-scale: 1;
+  
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    --white: white;
+    --grey10: #F8F8F8;
+    --grey20: #F0F0F0;
+    --grey30: #E0E0E0;
+    --grey40: #C0C0C0;
+    --grey50: #A0A0A0;
+    --grey60: #808080;
+    --grey70: #606060;
+    --grey80: #404040;
+    --grey90: #202020;
+    --black: black;
+  }
+}

@@ -1,0 +1,26 @@
+.app {
+  display: grid;
+
+  grid-template-areas: "side main    inspector"
+                       "side toolbar toolbar";
+
+  grid-template-columns: max-content 1fr max-content;
+  grid-template-rows: 1fr max-content;
+}
+
+.main {
+  grid-area: main;
+  overflow: auto;
+}
+
+.side { 
+  grid-area: side;
+}
+
+.inspector {
+  grid-area: inspector;
+}
+
+.toolbar { 
+  grid-area: toolbar;
+}

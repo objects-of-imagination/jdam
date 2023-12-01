@@ -1,0 +1,77 @@
+.form {
+  --field-padding: calc(0.5 * var(--padding))
+}
+
+.label {
+  display: block;
+  padding: var(--field-padding) 0;
+}
+
+.input {
+
+  color: var(--input-fg);
+  background-color: var(--input-bg);
+
+  display: block;
+  padding: var(--field-padding);
+  font-size: 14pt;
+  height: 2.5rem;
+  width: 40ch;
+}
+
+.input:focus-visible {
+  outline: 1px solid var(--border-col, var(--white));
+  outline-offset: -1px;
+}
+
+.passwordWrap {
+  width: max-content;
+}
+
+.validation {
+  display: grid;
+  
+  grid-template-areas: "children icon"
+                       "error   error";
+  grid-template-columns: 1fr min-content;
+  grid-template-rows: 1fr min-content;
+
+  &:global(.valid) {
+    --border-col: limegreen;
+  }
+
+  &:global(.invalid) {
+    --border-col: red;
+  }
+}
+
+.children {
+  grid-area: children;
+}
+
+.border {
+  grid-area: children / children / icon / icon;
+  border: 1px solid var(--border-col);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.icon {
+  grid-area: icon;
+  align-self: start;
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+.error {
+  grid-area: error;
+  padding: 0.2em 0;
+  color: var(--border-col);
+  font-size: 12pt;
+
+  & ul {
+    margin: 0;
+    padding-left: 2em;
+
+  }
+}

@@ -1,0 +1,59 @@
+.loginForm {
+  background-color: black;
+
+  display: grid;
+  grid-template-areas: "side . ."
+                       "side email ."
+                       "side username ."
+                       "side password ."
+                       "side confirm ."
+                       "side signin ."
+                       "side . .";
+  grid-template-columns: 1fr max-content 1fr;
+  grid-template-rows: 300px repeat(5, min-content) 1fr;
+  height: 100%;
+  width: 100%;
+}
+
+.side {
+  grid-row: 1 / -1;
+  grid-column: 1 / -1;
+}
+
+.inputs {
+  display: grid;
+
+  grid-template-rows: subgrid;
+  grid-template-columns: subgrid;
+
+  grid-row: 2 / -2;
+  grid-column: 2 / 3;
+
+  padding: calc(2 * var(--padding));
+  margin: 1rem;
+
+  background-color: color-mix(in srgb, transparent 5%, var(--default-bg));
+  box-shadow: 0 12px 32px 0 rgb(0 0 0 / 50%);
+}
+
+.username {
+  grid-area: username;
+}
+
+.email {
+  grid-area: email;
+}
+
+.password {
+  grid-area: password;
+}
+
+.confirm {
+  grid-area: confirm;
+}
+
+.signin {
+  margin-top: calc(2 * var(--padding));
+  grid-area: signin;
+  gap: 0.5rem;
+}
