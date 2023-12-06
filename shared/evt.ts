@@ -1,5 +1,5 @@
-export type Evts<T> = {
-  [ Key in keyof T ]: (...args: unknown[]) => void
+type Evts<T> = {
+  [ Key in keyof T ]: (...args: any[]) => void | Promise<void>
 }
 
 export default class Evt<T extends Evts<T>> {

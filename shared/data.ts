@@ -46,6 +46,7 @@ export function seconds(secs: number): Duration {
 
 export interface Session {
   id: Id
+  name: string
   created: Timestamp
   createdBy: Id
 
@@ -58,6 +59,7 @@ export interface Session {
 export function newSession(session: Partial<Session>): Session {
   return Object.assign({ 
     id: '',
+    name: '',
     createdBy: '',
     created: Date.now(),
     maxUsers: 6,
@@ -123,4 +125,27 @@ export function newSound(sound: Partial<Sound>): Sound {
     fadeInDuration: 500,
     fadeOutDuration: 500
   }, sound)
+}
+
+export type JObject = {
+  [ key: string | symbol | number ]: unknown
+}
+
+export function pare(object: JObject) {
+  for (const key of Object.keys(object)) {
+    const value = object[key]
+    if (typeof value !== 'undefined') { continue }
+    delete object[key]
+  }
+  return object
+}
+
+export function paredCopy<T extends JObject, K extends keyof T>(object: T | undefined, keys: K[]): Partial<T> | undefined {
+  if (!object) { return }
+  const result: Partial<T> = {}
+  for (const key of keys) {
+    if (typeof object[key] === 'undefined') { continue }
+    result[key] = object[key] 
+  }
+  return result
 }

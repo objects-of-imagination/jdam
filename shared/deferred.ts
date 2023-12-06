@@ -1,7 +1,7 @@
-export default class Deferred<T> {
+export default class Deferred<T, E = unknown> {
 
   private _resolve!: (value: T | PromiseLike<T>) => void
-  private _reject!: (err: unknown) => void
+  private _reject!: (err: E) => void
   promise!: Promise<T>
 
   constructor() {
@@ -19,7 +19,7 @@ export default class Deferred<T> {
     this._resolve(value)
   }
 
-  reject(err: unknown) {
+  reject(err: E) {
     this._reject(err)
   }
 

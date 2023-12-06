@@ -9,6 +9,10 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3003,
     proxy: {
+      '/api/v1/ws': { 
+        target: 'ws://localhost:3002',
+        ws: true
+      },
       '/api': 'http://localhost:3002'
     }
   }

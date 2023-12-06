@@ -1,107 +1,73 @@
-import express from 'express'
 import Crypto from 'crypto'
-import { NODE_OPERATIONS_PATH,
+import {
+  CREATE_NODE_RPC,
   CreateNodeRequest,
   CreateNodeResponse,
-  ErrorResponse,
-  errorResponse,
-  DeleteNodeResponse,
+  DELETE_NODE_RPC,
   DeleteNodeRequest,
+  DeleteNodeResponse,
+  GET_NODES_RPC,
   GetNodesResponse,
-  UpdateNodeResponse,
-  UpdateNodeRequest
+  UPDATE_NODE_RPC,
+  UpdateNodeRequest,
+  UpdateNodeResponse
 } from '../../../shared/api'
-import { newNode } from '../../../shared/data'
 
-import { appendNode, deleteNode, getNode, getNodes, getRootNode, updateNode } from './data_state'
+import { RPCHostMethod } from '../../../shared/rpc'
+import { createNode, deleteNode, getNode, getNodes, getRootNode, updateNode } from './data_state'
 
-const router = express.Router()
-router.use(express.json())
+const operations: Record<string, RPCHostMethod> = {
+  [ CREATE_NODE_RPC ]: async (req): Promise<CreateNodeResponse['response']> => {
+    const request = req as CreateNodeRequest['request']
 
-router.post(NODE_OPERATIONS_PATH, (req, res: express.Response<CreateNodeResponse | ErrorResponse>) => {
-  const request: CreateNodeRequest = req.body
-  if (!request.createdBy) {
-    res.json(errorResponse([ 'empty user sent to createdBy' ]))
-    return
-  }
+    if (!request.createdBy) {
+      throw 'empty user sent to createdBy'
+    }
 
-  const node = newNode({
-    id: Crypto.randomUUID(),
-    createdBy: request.createdBy,
-    parent: request.parent
-  })
+    return createNode({
+      ...request.node,
+      createdBy: request.createdBy,
+      parent: request.parent
+    })
+  },
+  [ DELETE_NODE_RPC ]: async (req): Promise<DeleteNodeResponse['response']> => {
+    const request = req as DeleteNodeRequest['request']
+    if (!request.id) {
+      throw 'empty id sent to delete node'
+    }
 
-  if (!request.parent) {
-    appendNode(getRootNode().id, node)
-  } else {
-    appendNode(request.parent, node)
-  }
+    const existingNode = getNode(request.id)
+    if (!existingNode) {
+      throw 'no node found for this id' 
+    }
 
-  res.json({
-    ts: Date.now(),
-    result: 'success',
-    data: node
-  })
-})
+    deleteNode(request.id)
+    return existingNode
+  },
+  [ UPDATE_NODE_RPC ]: async (req): Promise<UpdateNodeResponse['response']> => {
+    const request = req as UpdateNodeRequest['request']
+    if (!request.id) {
+      throw 'empty id sent to update node'
+    }
 
-router.delete(NODE_OPERATIONS_PATH, (req, res: express.Response<DeleteNodeResponse | ErrorResponse>) => {
-  const request: DeleteNodeRequest = req.body
-  if (!request.id) {
-    res.json(errorResponse([ 'empty id sent to delete node' ]))
-    return
-  }
+    const existingNode = getNode(request.id)
+    if (!existingNode) {
+      throw 'no node found for this id'
+    }
 
-  const existingNode = getNode(request.id)
-  if (!existingNode) {
-    res.json(errorResponse([ 'no node found for this id' ]))
-    return
-  }
+    const updatedNode = updateNode(request)
+    if (!updatedNode) {
+      throw 'unable to update the node'
+    }
 
-  deleteNode(request.id)
-  res.json({
-    ts: Date.now(),
-    result: 'success',
-    data: existingNode
-  })
-
-})
-
-router.patch(NODE_OPERATIONS_PATH, (req, res: express.Response<UpdateNodeResponse | ErrorResponse>) => {
-  const request: UpdateNodeRequest = req.body
-  if (!request.id) {
-    res.json(errorResponse([ 'empty id sent to update node' ]))
-    return
-  }
-
-  const existingNode = getNode(request.id)
-  if (!existingNode) {
-    res.json(errorResponse([ 'no node found for this id' ]))
-    return
-  }
-
-  const updatedNode = updateNode(request)
-  if (!updatedNode) {
-    res.json(errorResponse([ 'unable to update the node' ]))
-    return
-  }
-
-  res.json({
-    ts: Date.now(),
-    result: 'success',
-    data: updatedNode
-  })
-})
-
-router.get(NODE_OPERATIONS_PATH, (_req, res: express.Response<GetNodesResponse>) => {
-  res.json({
-    ts: Date.now(),
-    result: 'success',
-    data: {
+    return updatedNode
+  },
+  [ GET_NODES_RPC ]: async (): Promise<GetNodesResponse['response']> => {
+    return {
       nodes: getNodes(),
       root: getRootNode()
     }
-  })
-})
+  }
+}
 
-
-export default router
+export default operations

@@ -1,3 +1,14 @@
 .nodeLanes {
-
+  padding: var(--padding);
+  
 }
+
+.nodeLane {
+  padding: var(--padding);
+  min-height: 33vh;
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--grey70);
+  }
+}
+

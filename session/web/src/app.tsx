@@ -1,13 +1,14 @@
 import { ClientProvider } from './client_provider'
 import { NodeLanes } from './node_lanes'
+import { Theme } from './theme/theme'
 
 import '~shared/app.css'
 import styles from './app.module.css'
 
 function App() {
-
   return (
     <ClientProvider>
+      <Theme/>
       <div class={ `fixed full ${styles.app}` }>
         <div class={ `relative ${styles.side}` }>
           Side 

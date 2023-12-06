@@ -1,6 +1,6 @@
 import Crypto from 'crypto'
 import fs from 'fs'
-import { Session, newSession, Node, Id, Sound, newNode, newSound } from '../../../shared/data'
+import { Session, newSession, Node, Id, Sound, newNode, newSound, paredCopy } from '../../../shared/data'
 
 export const SESSION: Session = newSession({ id: Crypto.randomUUID() })
 
@@ -13,32 +13,63 @@ export function getRootNode() {
   return rootNode 
 }
 
-export function appendNode(parentId: Id, node: Node) {
-  const parentNode = nodeMap.get(parentId) 
-  if (!parentNode) { return node }
-
-  const index = parentNode.children.indexOf(node.id)
-  if (index !== -1) {
-    parentNode.children.splice(index, 1)
-  }
-  parentNode.children.push(node.id)
-
+export function createNode(input: Partial<Node>) {
+  const node = newNode({
+    ...input,
+    id: Crypto.randomUUID()
+  })
+    
   nodeMap.set(node.id, node)
+
+  if (!node.parent) {
+    parentNode(node.id, rootNode.id)
+  } else {
+    parentNode(node.id, node.parent)
+  }
 
   return node
 }
 
+export function parentNode(nodeId: Id, parentId: Id) {
+  const existingNode = nodeMap.get(nodeId)
+  if (!existingNode) { return }
+
+  const parentNode = nodeMap.get(parentId) 
+  if (!parentNode) { return }
+  if (parentNode.children.length === parentNode.maxLength) { return }
+
+  if (existingNode.parent && existingNode.parent !== parentId) { 
+    unParentNode(nodeId) 
+  }
+
+  const index = parentNode.children.indexOf(existingNode.id)
+  if (index !== -1) {
+    parentNode.children.splice(index, 1)
+  }
+  parentNode.children.push(existingNode.id)
+}
+
+export function unParentNode(nodeId: Id) {
+  const existingNode = nodeMap.get(nodeId)
+  if (!existingNode?.parent) { return }
+
+  // remove this node from children of parent
+  const parentNode = nodeMap.get(existingNode.parent)
+  if (!parentNode) { return }
+
+  const index = parentNode.children.indexOf(existingNode.id)
+  if (index === -1) { return }
+
+  existingNode.parent = undefined
+  parentNode.children.splice(index, 1) 
+}
+
 export function updateNode(input: Partial<Node> & { id: Id }) {
-  // only updates non-inherent and non-structural properties
   const existingNode = nodeMap.get(input.id)
 
   if (!existingNode) { return }
 
-  const updates: Partial<Node> = {
-    maxLength: input.maxLength
-  }
-
-  Object.assign(existingNode, updates)
+  Object.assign(existingNode, paredCopy(input, [ 'maxLength' ]))
 
   return existingNode
 }
@@ -49,14 +80,7 @@ export function deleteNode(id: Id) {
 
   nodeMap.delete(id)
 
-  // remove this node from children of parent
-  if (existingNode.parent) {
-    const parentNode = nodeMap.get(existingNode.parent)
-    if (parentNode) {
-      const index = parentNode.children.indexOf(existingNode.id)
-      if (index !== -1) { parentNode.children.splice(index, 1) }
-    }
-  }
+  unParentNode(id)
 
   // update parents of children
   if (existingNode.children) {
@@ -79,19 +103,56 @@ export function getNodes() {
   return Array.from(nodeMap.values())
 }
 
-export function upsertSound(input: Partial<Sound>, nodeId?: Id) {
-  const sound = newSound(input) 
+export function createSound(input: Partial<Sound>, nodeId?: Id) {
+  const sound = newSound({
+    ...input,
+    id: Crypto.randomUUID()
+  })
+    
+  soundMap.set(sound.id, sound)
 
-  const existingSound = soundMap.get(sound.id)
-  if (!existingSound) {
-    soundMap.set(sound.id, sound)
-  } else {
-    Object.assign(existingSound, sound)
+  if (nodeId) {
+    linkSoundToNode(sound.id, nodeId)
   }
 
-  if (!nodeId) { return sound }
+  return sound
+}
 
-  linkSoundToNode(sound.id, nodeId)
+export function updateSound(input: Partial<Sound>, nodeId?: Id) {
+  if (!input.id) { return }
+
+  const existingSound = soundMap.get(input.id)
+  if (!existingSound) { return }
+
+  Object.assign(existingSound, paredCopy(input, [
+    'name',
+    'fadeInStart',
+    'fadeInDuration',
+    'fadeOutStart',
+    'fadeOutDuration',
+    'volume',
+    'pan'
+  ]))
+
+  if (!nodeId) { return existingSound }
+
+  linkSoundToNode(existingSound.id, nodeId)
+  return existingSound
+}
+
+export function deleteSound(soundId: Id) {
+  const sound = soundMap.get(soundId)
+  if (!sound) { return }
+
+  soundMap.delete(soundId)
+
+  unlinkSound(soundId)
+
+  if (sound.path) {
+    if (fs.existsSync(sound.path)) { fs.rmSync(sound.path) }
+  }
+
+  return sound
 }
 
 export function linkSoundToNode(soundId: Id, nodeId: Id) {
@@ -130,20 +191,6 @@ export function unlinkSound(soundId: Id) {
   for(const nodeId of nodeMap.keys()) {
     unlinkSoundFromNode(soundId, nodeId)
   }
-}
-
-export function deleteSound(soundId: Id) {
-
-  const sound = soundMap.get(soundId)
-  if (!sound) { return }
-
-  soundMap.delete(soundId)
-
-  unlinkSound(soundId)
-
-  if (fs.existsSync(sound.path)) { fs.rmSync(sound.path) }
-
-  return sound
 }
 
 export function getSound(id: Id) {
