@@ -10,5 +10,18 @@
   &:not(:last-child) {
     border-bottom: 1px solid var(--grey70);
   }
+
+  & .container {
+    --offset-index: 0;
+    display: grid;
+    width: var(--node-width);
+    transition: translate 300ms var(--ease-out);
+    translate: calc(var(--offset-index) * var(--node-width));
+    
+    & .wrapper {
+      padding: var(--padding);
+      position: relative;
+    }
+  }
 }
 

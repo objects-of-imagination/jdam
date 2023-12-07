@@ -10,10 +10,14 @@ import {
   GetNodesResponse,
   HEARTBEAT_PATH,
   HeartbeatResponse,
+  HostInitRequest,
+  HostInitResponse,
   Result, 
   UPDATE_NODE_RPC, 
+  UPLOAD_SOUND, 
   UpdateNodeRequest, 
   UpdateNodeResponse, 
+  UploadSoundResponse, 
   WS_PATH
 } from '~shared/api'
 import { Id, Node } from '~shared/data'
@@ -24,30 +28,41 @@ import { RPC, RPCMessageTarget } from '~shared/rpc'
 export type DataState = {
   nodes: Map<Id, Node>
   selectedNodes: Set<Id>
+  activeNode: Id
   root?: Id
+  person: Id
+  name: string
+  people: Set<Id>
 }
 
 function createDataState(): DataState {
   return {
     nodes: new Map(),
-    selectedNodes: new Set()
+    selectedNodes: new Set(),
+    activeNode: '',
+    person: 'test',
+    name: 'Session',
+    people: new Set([ 'test' ])
   }
 }
 
 type SessionClientEvts = {
   'set-data': (state: Partial<DataState>) => void
-  'rpc-error': (errors: string[]) => void
+  'error': (errors: string[]) => void
 }
 
 export class SessionClient extends Evt<SessionClientEvts> {
 
   data = createDataState()
   rpc!: RPC
+  hostRpc!: RPC
   connected = new Deferred<boolean>()
+  hostInit = new Deferred<boolean>()
 
   async init() {
     this.data = createDataState()
     this.connected.init()
+    this.hostInit.init()
 
     const ws = new WebSocket(new URL(WS_PATH, `ws://${window.location.host}`).toString())
     ws.addEventListener('open', () => {
@@ -91,11 +106,48 @@ export class SessionClient extends Evt<SessionClientEvts> {
       }
     })
 
+    const hostTarget: RPCMessageTarget = {
+      send: async (data: unknown) => { 
+        await this.connected.promise
+        if (!window.top || window.top === window) { return }
+        window.top.postMessage(data, window.location.origin)
+      },
+      onReceive: handler => {
+        const onMessage = async (evt: MessageEvent) => {
+          try {
+            const message = evt.data
+            handler(message)
+          } catch (err) {
+          /* parsing error */
+          }
+        }
+
+        window.addEventListener('message', onMessage)
+        return () => {
+          window.removeEventListener('message', onMessage)
+        }
+      }
+    }
+
+    this.hostRpc = new RPC(hostTarget, {
+    })
+
+    if (window.top && window.top !== window) {
+      const hostInitInfo = await this.hostRpc.send<HostInitRequest, HostInitResponse>('host-init')
+      if (hostInitInfo) {
+        this.data.person = hostInitInfo.person
+        this.data.name = hostInitInfo.name
+        this.data.people = new Set(hostInitInfo.people)
+      }
+      this.hostInit.resolve(true)
+    }
+
     const result = await this.getNodes()
     if (!result) { return }
     
     this.data.nodes = new Map(result.nodes.map(n => [ n.id, n ]))
     this.data.root = result.root.id
+    this.data.activeNode = result.root.id
     this.data.selectedNodes.add(result.root.id)
 
     this.fire('set-data', structuredClone(this.data))
@@ -105,23 +157,36 @@ export class SessionClient extends Evt<SessionClientEvts> {
 
   setNodes(nodes: Node[]) {
     const selected: string[] = []
-    this.data.nodes = new Map(nodes.map(n => [ n.id, n ]))
+
+    const nodesInMap = new Set<Id>()
+
     for (const node of nodes) {
+      nodesInMap.add(node.id)
+
+      const existingNode = this.data.nodes.get(node.id)
+      if (existingNode) { 
+        Object.assign(existingNode, node) 
+      }
+      else { 
+        this.data.nodes.set(node.id, node) 
+      }
+
       if (!this.data.selectedNodes.has(node.id)) { continue }
       selected.push(node.id)
     }
-    this.data.selectedNodes = new Set(selected)
-    this.fire('set-data', { nodes: structuredClone(this.data.nodes) })
-  }
 
-  setRoot(nodeId: Id) {
-    if (this.data.root) {
-      this.data.selectedNodes.delete(this.data.root)
+    for (const nodeId of this.data.nodes.keys()) {
+      if (nodesInMap.has(nodeId)) { continue }
+      this.data.nodes.delete(nodeId)
     }
 
-    this.data.root = nodeId
-    this.data.selectedNodes.add(nodeId)
-    this.fire('set-data', { root: this.data.root })
+    if (!this.data.nodes.has(this.data.activeNode)) {
+      this.data.activeNode = nodes[0].id || this.data.root || ''
+    }
+
+
+    this.data.selectedNodes = new Set(selected)
+    this.fire('set-data', { nodes: structuredClone(this.data.nodes) })
   }
 
   async heartbeat(): Promise<Result> {
@@ -162,73 +227,121 @@ export class SessionClient extends Evt<SessionClientEvts> {
     return children
   }
 
+  getSiblings(nodeId: Id): Node[] {
+    const result: Node[] = []
+    const node = this.data.nodes.get(nodeId)
+    if (!node) { return result }
+
+    const parentId = node.parent
+
+    for (const node of this.data.nodes.values()) {
+      if (parentId !== node.parent) { continue }
+      result.push(node)
+    }
+
+    return result
+  }
+
   getVisibleNodes() {
-    const result: [ number, Node[] ][] = []
-    if (!this.data.root) { return result }
 
-    let level = 0
-    let currentNode = this.data.nodes.get(this.data.root)!
-    result.push([ -1, [ currentNode ] ])
+    // add any children of the active node immediately at the +1 level
+    const result: [ Node[], number, Id ][] = [
+      [ this.getChildren(this.data.activeNode || this.data.root || ''), 0, this.data.activeNode || this.data.root || '' ]
+    ]
 
-    while(currentNode.children.length) {
+    let currentNode = this.getActiveNode()
+    if (!currentNode) { return result }
 
-      let childNodes: Node[] = []
-      let selectedChild: Node | undefined
-      let childWithChildren: Node | undefined
+    while(currentNode?.parent) {
+      const currentId = currentNode.id
+      const siblings = this.getSiblings(currentId)
+      const selectedIndex = siblings.findIndex(s => s.id === currentId)
 
-      for (const childId of currentNode.children) {
-        const childNode = this.data.nodes.get(childId)
-        if (!childNode) { continue }
+      result.unshift([ siblings, selectedIndex, currentNode.parent ])
 
-        childNodes.push(childNode)
-
-        if (!childWithChildren && childNode.children.length) {
-          childWithChildren = childNode
-        }
-
-        if (!this.data.selectedNodes.has(childNode.id)) { continue }
-        selectedChild = childNode
-      }
-
-      result.push([ level, childNodes ])
-
-      if (!selectedChild && !childWithChildren) { break }
-
-      if (selectedChild) { currentNode = selectedChild }
-      if (childWithChildren) { currentNode = childWithChildren }
-      level++ 
+      currentNode = this.data.nodes.get(currentNode.parent)
     }
     
     return result
+     
+  }
+
+  setActiveNode(nodeId: Id) {
+    if (!this.data.nodes.has(nodeId)) { return }
+
+    this.data.activeNode = nodeId
+    this.fire('set-data', { activeNode: this.data.activeNode })
+  }
+
+  getActiveNode() {
+    return this.data.nodes.get(this.data.activeNode || this.data.root || '')
   }
 
   async createNode(request: CreateNodeRequest['request']): Promise<CreateNodeResponse['response'] | undefined> {
     try {
       const result = await this.rpc.send<CreateNodeRequest, CreateNodeResponse>('create-node', request)
-      this.syncNodes()
+      await this.syncNodes()
       return result
     } catch (err) {
-      this.fire('rpc-error', err as string[])
+      this.fire('error', err as string[])
     }
   }
 
   async deleteNode(request: DeleteNodeRequest['request']): Promise<DeleteNodeResponse['response'] | undefined> {
     try {
       const result = await this.rpc.send<DeleteNodeRequest, DeleteNodeResponse>('delete-node', request)
-      this.syncNodes()
+      await this.syncNodes()
       return result
     } catch (err) {
-      this.fire('rpc-error', err as string[])
+      this.fire('error', err as string[])
     }
   }
 
   async updateNode(request: UpdateNodeRequest['request']): Promise<UpdateNodeResponse['response'] | undefined> {
     try {
       const result = await this.rpc.send<UpdateNodeRequest, UpdateNodeResponse>('update-node', request)
-      this.syncNodes()
+      await this.syncNodes()
       return result
     } catch (err) {
-      this.fire('rpc-error', err as string[])
+      this.fire('error', err as string[])
+    }
+  }
+
+  async uploadSound(soundFile: File, name = soundFile.name) {
+
+    const url = new URL(UPLOAD_SOUND, window.location.origin)
+    url.searchParams.set(name, name)
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: soundFile
+    })
+
+    try {
+      const result = await response.json() as UploadSoundResponse
+      if (result.result === 'failure') {
+        this.fire('error', [ `Upload sound "${soundFile.name}" failed` ])
+        return
+      }
+    } catch (err) {
+      this.fire('error', [ 'Could not parse upload sound response' ])
+    }
+
+  }
+
+  async addTestNodes() {
+    await this.createNode({ createdBy: this.data.person })
+    await this.createNode({ createdBy: this.data.person })
+    let node = await this.createNode({ createdBy: this.data.person })
+    if (node) { 
+      await this.createNode({ createdBy: this.data.person, parent: node.id })
+      await this.createNode({ createdBy: this.data.person, parent: node.id  })
+      node = await this.createNode({ createdBy: this.data.person, parent: node.id })
+    }
+    if (node) { 
+      await this.createNode({ createdBy: this.data.person, parent: node.id })
+      await this.createNode({ createdBy: this.data.person, parent: node.id  })
+      node = await this.createNode({ createdBy: this.data.person, parent: node.id })
     }
   }
 

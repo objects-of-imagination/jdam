@@ -30,6 +30,10 @@ export type Result = 'success' | 'failure'
 
 export const PERSON_OPERATIONS_PATH = `${API_PREFIX}/person`
 
+export const SESSION_CONNECT_RPC = 'session-connect'
+export type SessionConnectRequest = RPCRequest<typeof SESSION_CONNECT_RPC, { person: Id }>
+export type SessionConnectResponse = RPCResponse<{ people: Id[] }>
+
 export const CREATE_NODE_RPC = 'create-node'
 export type CreateNodeRequest = RPCRequest<typeof CREATE_NODE_RPC, { createdBy: Id, parent?: Id, node?: Partial<Node> }>
 export type CreateNodeResponse = RPCResponse<Node>
@@ -69,3 +73,12 @@ export type LinkSoundToNodeResponse = RPCResponse
 export const UNLINK_SOUND_RPC = 'unlink-sound'
 export type UnlinkSoundFromNodeRequest = RPCRequest<typeof UNLINK_SOUND_RPC, { soundId: Id, nodeId?: Id }>
 export type UnlinkSoundFromNodeResponse = RPCResponse 
+
+export const UPLOAD_SOUND = `${API_PREFIX}/sound`
+export type UploadSoundURLParams = { name: string }
+export type UploadSoundRequest = File
+export type UploadSoundResponse = Response
+
+export const HOST_INIT_RPC = 'host-init'
+export type HostInitRequest = RPCRequest<typeof HOST_INIT_RPC> 
+export type HostInitResponse = RPCResponse<{ person: Id, name: string, people: Id[] }>

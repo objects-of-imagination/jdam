@@ -21,10 +21,16 @@ export function createNode(input: Partial<Node>) {
     
   nodeMap.set(node.id, node)
 
+  let canAdd = false
   if (!node.parent) {
-    parentNode(node.id, rootNode.id)
+    canAdd ||= !!parentNode(node.id, rootNode.id)
   } else {
-    parentNode(node.id, node.parent)
+    canAdd ||= !!parentNode(node.id, node.parent)
+  }
+
+  if (!canAdd) { 
+    nodeMap.delete(node.id)
+    return 
   }
 
   return node
@@ -47,6 +53,9 @@ export function parentNode(nodeId: Id, parentId: Id) {
     parentNode.children.splice(index, 1)
   }
   parentNode.children.push(existingNode.id)
+  existingNode.parent = parentId
+
+  return true
 }
 
 export function unParentNode(nodeId: Id) {
@@ -62,6 +71,8 @@ export function unParentNode(nodeId: Id) {
 
   existingNode.parent = undefined
   parentNode.children.splice(index, 1) 
+
+  return true
 }
 
 export function updateNode(input: Partial<Node> & { id: Id }) {
@@ -78,19 +89,23 @@ export function deleteNode(id: Id) {
   const existingNode = nodeMap.get(id)
   if (!existingNode) { return }
 
-  nodeMap.delete(id)
-
   unParentNode(id)
 
-  // update parents of children
-  if (existingNode.children) {
-    for (const childId of existingNode.children) {
+  nodeMap.delete(id)
+
+  // eliminate all children recursively
+  const recurse = (node: Node) => {
+    const { children } = node
+    if (!children.length) { return }
+    for (const childId of children) {
       const child = nodeMap.get(childId)
       if (!child) { continue }
-
-      child.parent = existingNode.parent // this could unset the parent
+      nodeMap.delete(childId)
+      recurse(child)
     }
   }
+
+  recurse(existingNode)
 
   return existingNode
 }

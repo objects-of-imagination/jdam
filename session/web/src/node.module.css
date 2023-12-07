@@ -1,0 +1,6 @@
+.node {
+  padding: var(--padding);
+  background-color: var(--secondary-bg);
+  color: var(--secondary-fg);
+  height: var(--node-height);
+}

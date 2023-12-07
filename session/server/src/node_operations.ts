@@ -1,4 +1,3 @@
-import Crypto from 'crypto'
 import {
   CREATE_NODE_RPC,
   CreateNodeRequest,
@@ -24,11 +23,17 @@ const operations: Record<string, RPCHostMethod> = {
       throw 'empty user sent to createdBy'
     }
 
-    return createNode({
+    const node = createNode({
       ...request.node,
       createdBy: request.createdBy,
       parent: request.parent
     })
+
+    if (!node) {
+      throw `max nodes reached for parent ${request.parent}`
+    }
+
+    return node
   },
   [ DELETE_NODE_RPC ]: async (req): Promise<DeleteNodeResponse['response']> => {
     const request = req as DeleteNodeRequest['request']

@@ -6,11 +6,14 @@
 
   grid-template-columns: max-content 1fr max-content;
   grid-template-rows: 1fr max-content;
+
+  --node-width: 72ch;
+  --node-height: 44ch;
 }
 
 .main {
   grid-area: main;
-  overflow: auto;
+  overflow-y: scroll;
 }
 
 .side { 

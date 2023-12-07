@@ -33,8 +33,19 @@ html, body, .full-page {
   border-radius: var(--border-radius);
 }
 
-.overflow.hidden {
+.overflow {
+
+ &.hidden {
   overflow: hidden;
+ }
+
+ &.auto{
+   overflow: auto;
+ }
+
+ &.scroll {
+   overflow: scroll;
+ }
 }
 
 .relative {
