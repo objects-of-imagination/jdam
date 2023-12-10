@@ -1,0 +1,18 @@
+.track {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-items: center;
+
+}
+
+.controls {
+  grid-column: 1 / 2;
+  padding: var(--padding);
+  width: var(--track-height);
+}
+
+.waveform {
+  grid-column: 2 / -1
+}

@@ -13,7 +13,19 @@ html, body, .full-page {
 
   & * {
     box-sizing: border-box;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+      margin: 1px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: darkorange;
+      border-radius: 4px;
+    }
   }
+
+
 }
 
 .flex {
@@ -34,18 +46,23 @@ html, body, .full-page {
 }
 
 .overflow {
+  &.hidden {
+    overflow: hidden;
+  }
 
- &.hidden {
-  overflow: hidden;
- }
+  &.auto{
+    overflow: auto;
+  }
 
- &.auto{
-   overflow: auto;
- }
+  &.scroll {
+    overflow: scroll;
+  }
+}
 
- &.scroll {
-   overflow: scroll;
- }
+.display {
+  &.none {
+    display: none;
+  }
 }
 
 .relative {
@@ -101,21 +118,22 @@ button {
   height: var(--element-height);
   font-size: 14pt;
 
-  color: var(--primary-fg);
+  &.full {
+    height: unset;
+  }
+
+  --btn-fg: var(--white);
+  --btn-bg: var(--grey80);
+
+  color: var(--btn-fg);
+  background-color: var(--btn-bg);
 
   border-radius: var(--border-radius);
   
   &.primary {
-    background-color: color-mix(in srgb, transparent 15%, var(--primary-bg));
-
-    &:hover {
-      background-color: color-mix(in hsl, white 10%, var(--primary-bg));
-    }
-  }
-
-  &.secondary {
-    --primary-fg: var(--white);
-    --primary-bg: var(--grey80);
+    --btn-fg: var(--primary-fg);
+    --btn-bg: var(--primary-bg);
+    background-color: color-mix(in srgb, transparent 15%, var(--btn-bg));
   }
 
   &.no-fill {
@@ -128,11 +146,17 @@ button {
   }
 
   &:hover {
-    background-color: var(--grey70);
+    background-color: color-mix(in hsl, white 10%, var(--btn-bg));
   }
 
   &.de-emphasize {
     height: calc(0.75 * var(--element-height));
     font-size: 12pt; 
+  }
+
+  &.corner {
+    position: absolute;
+    top: var(--padding);
+    right: var(--padding);
   }
 }

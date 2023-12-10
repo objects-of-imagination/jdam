@@ -3,6 +3,7 @@ import express from 'express'
 import homepage from './homepage'
 import heartbeat from './heartbeat'
 import nodeOperations from './node_operations'
+import { operations as soundOperations, router as soundRouter } from './sound_operations'
 
 import childProcess from 'child_process'
 import path from 'path'
@@ -14,6 +15,7 @@ import { RPC, RPCMessageTarget } from '../../../shared/rpc'
 const app = express()
 
 app.use(heartbeat)
+app.use(soundRouter)
 
 if (process.env.NODE_ENV === 'dev') {
   const vite = childProcess.spawn('npm', [ 'run', 'dev' ], { 
@@ -34,13 +36,15 @@ const server = app.listen(PORT, () => {
 
 const wss = new WebSocketServer({ noServer: true })
 
-const RPC_ENDPOINTS = new Set<RPC>()
+const rpcEndpoints = new Set<RPC>()
 
 wss.on('connection', ws => {
 
   const target: RPCMessageTarget = {
-    send: (data: unknown) => { 
-      ws.send(JSON.stringify(data))
+    send: data => { 
+      for (const client of wss.clients.values()) {
+        client.send(JSON.stringify(data))
+      }
     },
     onReceive: handler => {
       const onMessage = async (data: Buffer) => {
@@ -59,19 +63,13 @@ wss.on('connection', ws => {
     }
   }
 
-  const rpc = new RPC(target, nodeOperations)
-  rpc.on('send', req => {
-    for (const endpoint of RPC_ENDPOINTS.values()) {
-      if (endpoint === rpc) { continue }
-      endpoint.send(req.method, req.request)
-    }
-  })
+  const rpc = new RPC(target, { ...nodeOperations, ...soundOperations })
 
-  RPC_ENDPOINTS.add(rpc)
+  rpcEndpoints.add(rpc)
   console.log('connected client')
 
   ws.on('close', () => {
-    RPC_ENDPOINTS.delete(rpc)
+    rpcEndpoints.delete(rpc)
     console.log('removed client')
   })
 

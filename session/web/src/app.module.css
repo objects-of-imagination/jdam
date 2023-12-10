@@ -1,14 +1,15 @@
 .app {
   display: grid;
 
-  grid-template-areas: "side main    inspector"
-                       "side toolbar toolbar";
+  grid-template-areas: "side main"
+                       "side toolbar";
 
   grid-template-columns: max-content 1fr max-content;
   grid-template-rows: 1fr max-content;
 
-  --node-width: 72ch;
-  --node-height: 44ch;
+  --node-width: min(48vw, 55rem);
+  --node-height: 32rem;
+  --track-height: 8rem;
 }
 
 .main {

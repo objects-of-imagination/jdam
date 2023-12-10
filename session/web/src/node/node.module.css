@@ -3,4 +3,9 @@
   background-color: var(--secondary-bg);
   color: var(--secondary-fg);
   height: var(--node-height);
+  flex: 1;
+  display: grid;
+
+  grid-template-columns: max-content 1fr;
+  grid-auto-rows: var(--track-height);
 }

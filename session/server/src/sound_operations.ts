@@ -6,17 +6,33 @@ import {
   DELETE_SOUND_RPC,
   DeleteSoundRequest,
   DeleteSoundResponse,
+  ErrorResponse,
   GET_SOUNDS_RPC,
   GetSoundsResponse,
   UPDATE_SOUND_RPC,
   UpdateSoundRequest,
-  UpdateSoundResponse
+  UpdateSoundResponse,
+  UploadSoundURLParams,
+  errorResponse,
+  UPLOAD_SOUND, 
+  UploadSoundResponse 
 } from '../../../shared/api'
+import Deferred from '../../../shared/deferred'
 
 import { RPCHostMethod } from '../../../shared/rpc'
 import { createSound, deleteSound, getSound, getSounds, updateSound } from './data_state'
 
-const operations: Record<string, RPCHostMethod> = {
+import fs from 'fs'
+import path from 'path'
+
+const TMP_DIR = '/tmp/jdam-sounds/'
+
+if (fs.existsSync(TMP_DIR)) {
+  fs.rmSync(TMP_DIR, { recursive: true })
+}
+fs.mkdirSync(TMP_DIR, { recursive: true })
+
+export const operations: Record<string, RPCHostMethod> = {
   [ CREATE_SOUND_RPC ]: async (req): Promise<CreateSoundResponse['response']> => {
     const request = req as CreateSoundRequest['request']
 
@@ -38,8 +54,7 @@ const operations: Record<string, RPCHostMethod> = {
       throw 'no sound found for this id' 
     }
     
-    deleteSound(request.id)
-    return existingSound
+    return deleteSound(request.id)
   }, [ UPDATE_SOUND_RPC ]: async (req): Promise<UpdateSoundResponse['response']> => {
     const request = req as UpdateSoundRequest['request']
     if (!request.id) {
@@ -64,4 +79,57 @@ const operations: Record<string, RPCHostMethod> = {
   }
 }
 
-export default operations
+import express from 'express'
+
+export const router = express.Router()
+
+router.post(UPLOAD_SOUND, express.raw({ type: '*/*', limit: '50mb' }), async (req, res: express.Response<UploadSoundResponse | ErrorResponse>) => {
+  const { name, soundId } = req.query as UploadSoundURLParams
+
+  if (!soundId) {
+    res.json(errorResponse([ 'empty soundId was supplied.' ]))
+    return
+  }
+
+  const existingSound = getSound(soundId)
+  if (!existingSound) { 
+    res.json(errorResponse([ `sound with id "${soundId}" does not exist` ]))
+    return
+  }
+
+  const id = Crypto.randomUUID()
+  const filePath = path.resolve(TMP_DIR, id)
+
+  try {
+    const writeDone = new Deferred<boolean>()
+    const writeStream = fs.createWriteStream(filePath)
+
+    // req.on('data', data => writeStream.write(data))
+    // req.on('end', () => writeStream.close())
+    writeStream.once('close', () => { writeDone.resolve(true) })
+    writeStream.once('error', err => { writeDone.reject(err) })
+
+    req.pipe(writeStream)
+
+    await writeDone.promise
+
+    const stats = fs.statSync(filePath)
+
+    existingSound.name = name
+    existingSound.path = filePath
+    existingSound.size = stats.size
+    existingSound.length = 1_000 // TODO: process the sound with ffmpeg and get length in millis
+
+    res.json({
+      ts: Date.now(),
+      result: 'success',
+      data: existingSound
+    })
+  } catch (err) {
+    res.json(errorResponse([ 'sound upload encountered an error', (err as Error).message ])).end()
+    return
+  }
+
+})
+
+

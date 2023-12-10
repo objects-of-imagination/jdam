@@ -21,6 +21,10 @@ export function errorResponse(errors: string[] = []): ErrorResponse {
   }
 }
 
+export function isErrorResponse(response: { result: Result }): response is ErrorResponse {
+  return response.result === 'failure'
+}
+
 export const WS_PATH = `${API_PREFIX}/ws`
 
 export const HEARTBEAT_PATH = `${API_PREFIX}/heartbeat`
@@ -75,9 +79,8 @@ export type UnlinkSoundFromNodeRequest = RPCRequest<typeof UNLINK_SOUND_RPC, { s
 export type UnlinkSoundFromNodeResponse = RPCResponse 
 
 export const UPLOAD_SOUND = `${API_PREFIX}/sound`
-export type UploadSoundURLParams = { name: string }
-export type UploadSoundRequest = File
-export type UploadSoundResponse = Response
+export type UploadSoundURLParams = { name: string, soundId: string }
+export type UploadSoundResponse = Response<Sound>
 
 export const HOST_INIT_RPC = 'host-init'
 export type HostInitRequest = RPCRequest<typeof HOST_INIT_RPC> 

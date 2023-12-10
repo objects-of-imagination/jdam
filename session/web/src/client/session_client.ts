@@ -1,32 +1,48 @@
 import { 
   CREATE_NODE_RPC,
+  CREATE_SOUND_RPC,
   CreateNodeRequest,
   CreateNodeResponse,
+  CreateSoundRequest,
+  CreateSoundResponse,
   DELETE_NODE_RPC,
+  DELETE_SOUND_RPC,
   DeleteNodeRequest,
   DeleteNodeResponse,
+  DeleteSoundRequest,
+  DeleteSoundResponse,
+  ErrorResponse,
   GET_NODES_RPC,
+  GET_SOUNDS_RPC,
   GetNodesRequest,
   GetNodesResponse,
+  GetSoundsRequest,
+  GetSoundsResponse,
   HEARTBEAT_PATH,
   HeartbeatResponse,
   HostInitRequest,
   HostInitResponse,
   Result, 
   UPDATE_NODE_RPC, 
+  UPDATE_SOUND_RPC, 
   UPLOAD_SOUND, 
   UpdateNodeRequest, 
   UpdateNodeResponse, 
+  UpdateSoundRequest, 
+  UpdateSoundResponse,
   UploadSoundResponse, 
-  WS_PATH
+  WS_PATH,
+  isErrorResponse
 } from '~shared/api'
-import { Id, Node } from '~shared/data'
+import { Id, Node, Sound } from '~shared/data'
 import Deferred from '~shared/deferred'
 import Evt from '~shared/evt'
+import { replaceIndexed } from '~shared/update_indexed'
 import { RPC, RPCMessageTarget } from '~shared/rpc'
 
 export type DataState = {
   nodes: Map<Id, Node>
+  sounds: Map<Id, Sound>
   selectedNodes: Set<Id>
   activeNode: Id
   root?: Id
@@ -38,6 +54,7 @@ export type DataState = {
 function createDataState(): DataState {
   return {
     nodes: new Map(),
+    sounds: new Map(),
     selectedNodes: new Set(),
     activeNode: '',
     person: 'test',
@@ -94,7 +111,7 @@ export class SessionClient extends Evt<SessionClientEvts> {
       }
     }
 
-    this.rpc = new RPC(target, {
+    this.rpc = new RPC(target, {}, {
       [ CREATE_NODE_RPC ]: () => {
         this.syncNodes()
       },
@@ -103,6 +120,15 @@ export class SessionClient extends Evt<SessionClientEvts> {
       },
       [ UPDATE_NODE_RPC ]: () => {
         this.syncNodes()
+      },
+      [ CREATE_SOUND_RPC ]: () => {
+        this.syncSounds()
+      },
+      [ DELETE_SOUND_RPC ]: () => {
+        this.syncSounds()
+      },
+      [ UPDATE_SOUND_RPC ]: () => {
+        this.syncSounds()
       }
     })
 
@@ -150,6 +176,11 @@ export class SessionClient extends Evt<SessionClientEvts> {
     this.data.activeNode = result.root.id
     this.data.selectedNodes.add(result.root.id)
 
+    const sounds = await this.getSounds()
+    if (sounds) {
+      this.data.sounds = new Map(sounds.sounds.map(s => [ s.id, s ]))
+    }
+
     this.fire('set-data', structuredClone(this.data))
 
     return
@@ -189,6 +220,20 @@ export class SessionClient extends Evt<SessionClientEvts> {
     this.fire('set-data', { nodes: structuredClone(this.data.nodes) })
   }
 
+  setSounds(sounds: Sound[]) {
+    let existingSounds = Array.from(this.data.sounds.values())
+
+    replaceIndexed(existingSounds, sounds, 'id')
+
+    this.data.sounds.clear()
+
+    for (const sound of existingSounds) {
+      this.data.sounds.set(sound.id, sound)
+    }
+    
+    this.fire('set-data', { sounds: structuredClone(this.data.sounds) })
+  }
+
   async heartbeat(): Promise<Result> {
     const response = await fetch(HEARTBEAT_PATH)
     try { 
@@ -207,10 +252,7 @@ export class SessionClient extends Evt<SessionClientEvts> {
     const result = await this.getNodes()
     if (!result) { return }
 
-    const { nodes } = result
-    if (!nodes?.length) { return }
-
-    this.setNodes(nodes)
+    this.setNodes(result.nodes)
   }
 
   getChildren(nodeId: Id): Node[] {
@@ -279,7 +321,7 @@ export class SessionClient extends Evt<SessionClientEvts> {
 
   async createNode(request: CreateNodeRequest['request']): Promise<CreateNodeResponse['response'] | undefined> {
     try {
-      const result = await this.rpc.send<CreateNodeRequest, CreateNodeResponse>('create-node', request)
+      const result = await this.rpc.send<CreateNodeRequest, CreateNodeResponse>('create-node', request, true)
       await this.syncNodes()
       return result
     } catch (err) {
@@ -289,7 +331,7 @@ export class SessionClient extends Evt<SessionClientEvts> {
 
   async deleteNode(request: DeleteNodeRequest['request']): Promise<DeleteNodeResponse['response'] | undefined> {
     try {
-      const result = await this.rpc.send<DeleteNodeRequest, DeleteNodeResponse>('delete-node', request)
+      const result = await this.rpc.send<DeleteNodeRequest, DeleteNodeResponse>('delete-node', request, true)
       await this.syncNodes()
       return result
     } catch (err) {
@@ -299,7 +341,7 @@ export class SessionClient extends Evt<SessionClientEvts> {
 
   async updateNode(request: UpdateNodeRequest['request']): Promise<UpdateNodeResponse['response'] | undefined> {
     try {
-      const result = await this.rpc.send<UpdateNodeRequest, UpdateNodeResponse>('update-node', request)
+      const result = await this.rpc.send<UpdateNodeRequest, UpdateNodeResponse>('update-node', request, true)
       await this.syncNodes()
       return result
     } catch (err) {
@@ -307,10 +349,53 @@ export class SessionClient extends Evt<SessionClientEvts> {
     }
   }
 
-  async uploadSound(soundFile: File, name = soundFile.name) {
+  async getSounds(): Promise<GetSoundsResponse['response'] | undefined> {
+    return await this.rpc.send<GetSoundsRequest, GetSoundsResponse>(GET_SOUNDS_RPC)
+  }
+
+  async syncSounds() {
+    await this.syncNodes()
+    const result = await this.getSounds()
+    if (!result) { return }
+
+    this.setSounds(result.sounds)
+  }
+
+  getSoundsForNode(nodeId: Id) {
+    const sounds: Sound[] = []
+
+    const node = this.data.nodes.get(nodeId)
+    if (!node) { return sounds }
+
+    const { sounds: soundIds } = node
+
+    for (const soundId of soundIds) {
+      const sound = this.data.sounds.get(soundId)
+      if (!sound) { continue }
+      sounds.push(sound)
+    }
+
+    return sounds
+  }
+
+  getUnlinkedSounds() {
+    const soundMap = structuredClone(this.data.sounds)
+
+    for (const node of this.data.nodes.values()) {
+      if (!node.sounds.length) { continue }
+      for (const soundId of node.sounds) {
+        soundMap.delete(soundId)
+      }
+    }
+
+    return Array.from(soundMap.values())
+  }
+
+  async uploadSound(soundFile: File, soundId: Id, name = soundFile.name) {
 
     const url = new URL(UPLOAD_SOUND, window.location.origin)
-    url.searchParams.set(name, name)
+    url.searchParams.set('name', name)
+    url.searchParams.set('soundId', soundId)
 
     const response = await fetch(url, {
       method: 'POST',
@@ -318,15 +403,46 @@ export class SessionClient extends Evt<SessionClientEvts> {
     })
 
     try {
-      const result = await response.json() as UploadSoundResponse
-      if (result.result === 'failure') {
-        this.fire('error', [ `Upload sound "${soundFile.name}" failed` ])
+      const result = await response.json() as UploadSoundResponse | ErrorResponse
+      if (isErrorResponse(result)) {
+        this.fire('error', [ `Upload sound "${soundFile.name}" failed`, ...result.errors ])
         return
       }
+      await this.syncSounds()
     } catch (err) {
       this.fire('error', [ 'Could not parse upload sound response' ])
     }
 
+  }
+
+  async createSound(request: CreateSoundRequest['request']): Promise<CreateSoundResponse['response'] | undefined> {
+    try {
+      const result = await this.rpc.send<CreateSoundRequest, CreateSoundResponse>('create-sound', request, true)
+      await this.syncSounds()
+      return result
+    } catch (err) {
+      this.fire('error', err as string[])
+    }
+  }
+
+  async deleteSound(request: DeleteSoundRequest['request']): Promise<DeleteSoundResponse['response'] | undefined> {
+    try {
+      const result = await this.rpc.send<DeleteSoundRequest, DeleteSoundResponse>('delete-sound', request, true)
+      await this.syncSounds()
+      return result
+    } catch (err) {
+      this.fire('error', err as string[])
+    }
+  }
+
+  async updateSound(request: UpdateSoundRequest['request']): Promise<UpdateSoundResponse['response'] | undefined> {
+    try {
+      const result = await this.rpc.send<UpdateSoundRequest, UpdateSoundResponse>('update-sound', request, true)
+      await this.syncSounds()
+      return result
+    } catch (err) {
+      this.fire('error', err as string[])
+    }
   }
 
   async addTestNodes() {

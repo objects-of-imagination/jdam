@@ -1,5 +1,8 @@
-import { Id, Node } from '~shared/data'
-import { useClient } from './client_provider'
+import { Id, Node, Sound } from '~shared/data'
+import { useClient } from '../client_provider'
+import { Track } from './track'
+import { For, createComputed, createSignal, onCleanup, onMount } from 'solid-js'
+import { DataState } from '../client/session_client'
 
 import styles from './node.module.css'
 
@@ -11,6 +14,25 @@ export interface NodeDisplayProps {
 
 export function NodeDisplay(props: NodeDisplayProps) {
   const client = useClient()
+
+  const [ sounds, setSounds ] = createSignal<Sound[]>([])
+
+  createComputed(() => {
+    setSounds(client.getSoundsForNode(props.node.id))
+  })
+
+  const onSetData = (data: Partial<DataState>) => {
+    if (!data.sounds) { return }
+    setSounds(client.getSoundsForNode(props.node.id))
+  }
+
+  onMount(() => {
+    client.on('set-data', onSetData)
+  })
+
+  onCleanup(() => {
+    client.off('set-data', onSetData)
+  })
 
   const handleOnClick = () => {
     client.setActiveNode(props.node.id)
@@ -29,17 +51,23 @@ export function NodeDisplay(props: NodeDisplayProps) {
   return (
     <div 
       tabIndex={ 0 }
-      class={ `rounded ${styles.node}` } 
+      class={ `position relative rounded ${styles.node}` } 
       style={ {
         'grid-column': `${props.length + props.index + 1} / span 1`
       } }
       onClick={ handleOnClick }
     >
-      { props.node.id }
+      <For each={ sounds() }>
+        { sound => (
+          <Track node={ props.node } sound={ sound }/>
+        )}
+      </For>
+      <Track node={ props.node }/>
       <button
+        class="secondary flex center corner circle"
         onClick={ handleOnDelete }
       >
-        X
+        &#10005;
       </button>
     </div>
   )
@@ -60,12 +88,11 @@ export function AddNodeDisplay(props: AddNodeDisplayProps) {
   }
 
   return (
-    <div 
-      tabIndex={ 0 }
+    <button
       class={ `flex center rounded ${styles.node}` } 
       onClick={ handleOnClick }
     >
        New Idea 
-    </div>
+    </button>
   )
 }

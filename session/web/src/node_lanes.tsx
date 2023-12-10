@@ -2,7 +2,7 @@ import { For, Index, createSignal, onCleanup, onMount, Show } from 'solid-js'
 import { useClient } from './client_provider'
 import { DataState } from './client/session_client'
 import { Id, Node } from '~shared/data'
-import { AddNodeDisplay, NodeDisplay } from './node'
+import { AddNodeDisplay, NodeDisplay } from './node/node'
 
 import styles from './node_lanes.module.css'
 

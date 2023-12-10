@@ -16,9 +16,6 @@ function App() {
         <div class={ `relative ${styles.main}` }>
           <NodeLanes/>
         </div>
-        <div class={ `relative ${styles.inpsector}` }>
-          Inspector 
-        </div>
         <div class={ `relative ${styles.toolbar}` }>
           Toolbar 
         </div>

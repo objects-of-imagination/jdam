@@ -21,6 +21,9 @@
     & .wrapper {
       padding: var(--padding);
       position: relative;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
     }
   }
 }
