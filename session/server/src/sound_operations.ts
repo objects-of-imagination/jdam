@@ -80,10 +80,24 @@ export const operations: Record<string, RPCHostMethod> = {
 }
 
 import express from 'express'
+import { ffmpegConvert } from '../../../ffmpeg/src/convert'
+import mime from 'mime-types'
 
 export const router = express.Router()
 
-router.post(UPLOAD_SOUND, express.raw({ type: '*/*', limit: '50mb' }), async (req, res: express.Response<UploadSoundResponse | ErrorResponse>) => {
+router.post(UPLOAD_SOUND, async (req, res: express.Response<UploadSoundResponse | ErrorResponse>) => {
+  const contentType = req.headers['content-type']
+  if (!contentType) {
+    res.json(errorResponse([ 'a content-type header must be supplied' ]))
+    return
+  }
+
+  const extension = mime.extension(contentType) 
+  if (!extension) {
+    res.json(errorResponse([ `unable to resolve content-type "${contentType}" to audio file extension` ]))
+    return
+  }
+
   const { name, soundId } = req.query as UploadSoundURLParams
 
   if (!soundId) {
@@ -98,18 +112,21 @@ router.post(UPLOAD_SOUND, express.raw({ type: '*/*', limit: '50mb' }), async (re
   }
 
   const id = Crypto.randomUUID()
-  const filePath = path.resolve(TMP_DIR, id)
+  const filePath = path.resolve(TMP_DIR, `${id}.flac`)
 
   try {
+    const ffmpegTransformer = ffmpegConvert({ 
+      inputFormat: extension,
+      outputFormat: 'flac'
+    })
+
     const writeDone = new Deferred<boolean>()
     const writeStream = fs.createWriteStream(filePath)
 
-    // req.on('data', data => writeStream.write(data))
-    // req.on('end', () => writeStream.close())
     writeStream.once('close', () => { writeDone.resolve(true) })
     writeStream.once('error', err => { writeDone.reject(err) })
 
-    req.pipe(writeStream)
+    req.pipe(ffmpegTransformer).pipe(writeStream)
 
     await writeDone.promise
 

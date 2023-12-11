@@ -85,3 +85,5 @@ export type UploadSoundResponse = Response<Sound>
 export const HOST_INIT_RPC = 'host-init'
 export type HostInitRequest = RPCRequest<typeof HOST_INIT_RPC> 
 export type HostInitResponse = RPCResponse<{ person: Id, name: string, people: Id[] }>
+
+export const CONVERT_SOUND = `${API_PREFIX}/convert`

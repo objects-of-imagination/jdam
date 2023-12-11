@@ -408,7 +408,8 @@ export class SessionClient extends Evt<SessionClientEvts> {
         this.fire('error', [ `Upload sound "${soundFile.name}" failed`, ...result.errors ])
         return
       }
-      await this.syncSounds()
+      this.syncSounds()
+      return result.data
     } catch (err) {
       this.fire('error', [ 'Could not parse upload sound response' ])
     }

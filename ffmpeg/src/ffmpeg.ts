@@ -1,13 +1,16 @@
 import os from 'os'
-import { spawn } from 'child_process'
-import { resolve } from 'path'
 import fs from 'fs'
+import { resolve, sep } from 'path'
+import { request } from 'https'
+import { Transform } from 'stream'
+import { spawn } from 'child_process'
 import Deferred from '../../shared/deferred'
+import jdamRoot from '../../shared/jdam_root'
 
-const MACHINE = os.machine()
-const BIN_DIR = resolve(process.cwd(), 'bin')
-const FFMPEG_DIR = resolve(process.cwd(), 'bin/ffmpeg')
-const OUTPUT_FILE = 'ffmpeg.tar.gz'
+export const MACHINE = os.machine()
+export const BIN_DIR = resolve(process.cwd(), 'bin')
+export const FFMPEG_DIR = resolve(process.cwd(), 'bin/ffmpeg')
+export const OUTPUT_FILE = 'ffmpeg.tar.gz'
 
 type Archs = 'amd64' | 'i686' | 'arm64' | 'armhf' | 'armel'
 
@@ -24,23 +27,36 @@ case 'i686':
   break
 }
 
-if (!fs.existsSync(BIN_DIR)) {
-  fs.mkdirSync(BIN_DIR, { recursive: true })
-}
-
 async function downloadFfmpeg() {
 
   console.log('\x1b[32mdownloading ffmpeg\x1b[0m')
 
   const downloadDone = new Deferred<boolean>()
-  const downloadProc = spawn('wget', [ 
-    '-O',
-    OUTPUT_FILE,
-    link 
-  ], { cwd: BIN_DIR, stdio: [ 'ignore', 'inherit', 'inherit' ] })
-  downloadProc.on('exit', () => { downloadDone.resolve(true) })
+  const writeStream = fs.createWriteStream(resolve(BIN_DIR, OUTPUT_FILE))
+  writeStream.once('close', () => {
+    downloadDone.resolve(true)
+  })
+
+  const linkUrl = new URL(link)
+
+  const req = request(linkUrl, res => {
+    const totalLength = Number(res.headers['content-length'] ?? 1.0)
+    console.log(totalLength)
+    let currentProgress = 0
+    res.pipe(new Transform({
+      transform(chunk, _encoding, callback) {
+        currentProgress += chunk.length
+        const currentStep = Math.floor((currentProgress / totalLength) * 100)
+        process.stdout.write(`\x1b[1G\x1b[0K${currentStep}%`)
+        callback(null, chunk)
+      }
+    })).pipe(writeStream)
+  })
+
+  req.end()
 
   await downloadDone.promise
+  process.stdout.write('\n')
   
   console.log('\x1b[32mdownload ffmpeg - done\x1b[0m')
 }
@@ -63,8 +79,7 @@ async function untarFfmpeg() {
   const dirs = fs.readdirSync(BIN_DIR)
   const untarredDir = dirs.find(d => (/^ffmpeg-/.test(d)))
   if (!untarredDir) {
-    console.error('could not find untarredDir')
-    process.exit(1)
+    throw new Error('could not find untarredDir')
   }
 
   console.log(`\x1b[32mrenaming ${resolve(BIN_DIR, untarredDir)} to ${FFMPEG_DIR}\x1b[0m`)
@@ -72,11 +87,17 @@ async function untarFfmpeg() {
   console.log(`\x1b[32mrenamed ${resolve(BIN_DIR, untarredDir)} to ${FFMPEG_DIR}\x1b[0m`)
 }
 
-async function setup() {
+export async function setup() {
+
+  if (!fs.existsSync(BIN_DIR)) {
+    fs.mkdirSync(BIN_DIR, { recursive: true })
+  }
+
   const processPath = resolve(FFMPEG_DIR, 'ffmpeg')
+
   if (fs.existsSync(processPath)) {
     console.info(`\x1b[33m${processPath} already exists, skpping setup\x1b[0m`)
-    process.exit(0)
+    return
   }
 
   const resolvedOutputFile = resolve(BIN_DIR, OUTPUT_FILE)
@@ -88,10 +109,21 @@ async function setup() {
   }
 
   if (!fs.existsSync(resolvedOutputFile)) {
-    console.error(`${OUTPUT_FILE} was not located at "${resolvedOutputFile}"`)
-    process.exit(1)
+    throw new Error(`${OUTPUT_FILE} was not located at "${resolvedOutputFile}"`)
   }
   await untarFfmpeg()
 }
 
-setup()
+if (process.argv[2] === 'setup') {
+  setup()
+}
+
+const JDAM_ROOT = jdamRoot(process.cwd(), resolve, fs.existsSync, sep)
+
+export function ffmpeg(args: string[]) {
+  const processPath = resolve(JDAM_ROOT, 'ffmpeg/bin/ffmpeg/ffmpeg')
+  if (!fs.existsSync(processPath)) {
+    throw new Error('ffmpeg binary is not present')
+  }
+  return spawn(processPath, args)
+}

@@ -51,7 +51,8 @@ export function Track(props: TrackProps) {
       if (!newSound) { return }
 
       try {
-        await client.uploadSound(file, newSound.id, file.name)
+        const sound = await client.uploadSound(file, newSound.id, file.name)
+        if (!sound) { throw new Error('sound was not uploaded') }
       } catch (err) {
         console.log(err)
         await client.deleteSound({ id: newSound.id })
