@@ -1,21 +1,21 @@
-export default function updateIndexed<T extends object, K extends string & keyof T>(source: T[], updates: T[], index: K) {
+export default function updateIndexed<T extends object, K extends string & keyof T>(sources: T[], updates: T[], index: K) {
   const updateMap = new Map<T[K], T>(updates.map(ob => [ ob[index], ob ]))
-  for (const item of source) {
-    const update = updateMap.get(item[index])
+  for (const source of sources) {
+    const update = updateMap.get(source[index])
     if (!update) { continue }
-    Object.assign(item, update)
+    Object.assign(source, update)
   }
-  return source
+  return sources
 }
 
-export function replaceIndexed<T extends object, K extends keyof T & string>(source: T[], updates: T[], index: K) {
+export function replaceIndexed<T extends object, K extends keyof T & string>(sources: T[], updates: T[], index: K) {
   // perform backwards, but copy the matchings objects into updates directly to preserve source references
 
-  const sourceMap = new Map<T[K], T>(source.map(ob => [ ob[index], ob ]))
-  for (const [ ind, item ] of updates.entries()) {
-    const source = sourceMap.get(item[index])
+  const sourceMap = new Map<T[K], T>(sources.map(ob => [ ob[index], ob ]))
+  for (const [ ind, update ] of updates.entries()) {
+    const source = sourceMap.get(update[index])
     if (!source) { continue }
-    updates[ind] = Object.assign(source, item)
+    updates[ind] = Object.assign(source, update)
   }
-  return source.splice(0, source.length, ...updates)
+  return sources.splice(0, sources.length, ...updates)
 }

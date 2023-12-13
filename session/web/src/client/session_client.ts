@@ -7,6 +7,7 @@ import {
   CreateSoundResponse,
   DELETE_NODE_RPC,
   DELETE_SOUND_RPC,
+  DOWNLOAD_WAVE,
   DeleteNodeRequest,
   DeleteNodeResponse,
   DeleteSoundRequest,
@@ -25,7 +26,7 @@ import {
   Result, 
   UPDATE_NODE_RPC, 
   UPDATE_SOUND_RPC, 
-  UPLOAD_SOUND, 
+  UPLOAD_WAVE, 
   UpdateNodeRequest, 
   UpdateNodeResponse, 
   UpdateSoundRequest, 
@@ -37,12 +38,13 @@ import {
 import { Id, Node, Sound } from '~shared/data'
 import Deferred from '~shared/deferred'
 import Evt from '~shared/evt'
-import { replaceIndexed } from '~shared/update_indexed'
+import diffIndexed from '~shared/diff_indexed'
 import { RPC, RPCMessageTarget } from '~shared/rpc'
 
 export type DataState = {
   nodes: Map<Id, Node>
   sounds: Map<Id, Sound>
+  waves: Map<Id, File>
   selectedNodes: Set<Id>
   activeNode: Id
   root?: Id
@@ -55,6 +57,7 @@ function createDataState(): DataState {
   return {
     nodes: new Map(),
     sounds: new Map(),
+    waves: new Map(),
     selectedNodes: new Set(),
     activeNode: '',
     person: 'test',
@@ -179,6 +182,9 @@ export class SessionClient extends Evt<SessionClientEvts> {
     const sounds = await this.getSounds()
     if (sounds) {
       this.data.sounds = new Map(sounds.sounds.map(s => [ s.id, s ]))
+      for (const sound of sounds.sounds) {
+        this.downloadWave(sound.id)
+      }
     }
 
     this.fire('set-data', structuredClone(this.data))
@@ -189,46 +195,49 @@ export class SessionClient extends Evt<SessionClientEvts> {
   setNodes(nodes: Node[]) {
     const selected: string[] = []
 
-    const nodesInMap = new Set<Id>()
+    const { added, removed, updated } = diffIndexed(Array.from(this.data.nodes.values()), nodes, 'id')
 
-    for (const node of nodes) {
-      nodesInMap.add(node.id)
-
-      const existingNode = this.data.nodes.get(node.id)
-      if (existingNode) { 
-        Object.assign(existingNode, node) 
-      }
-      else { 
-        this.data.nodes.set(node.id, node) 
-      }
-
-      if (!this.data.selectedNodes.has(node.id)) { continue }
-      selected.push(node.id)
+    for (const rem of removed) {
+      this.data.selectedNodes.delete(rem.id)
+      this.data.nodes.delete(rem.id)
     }
 
-    for (const nodeId of this.data.nodes.keys()) {
-      if (nodesInMap.has(nodeId)) { continue }
-      this.data.nodes.delete(nodeId)
+    for (const add of added) {
+      this.data.nodes.set(add.id, add)
+    }
+
+    for (const update of updated) {
+      const source = this.data.nodes.get(update.id)!
+      Object.assign(source, update)
     }
 
     if (!this.data.nodes.has(this.data.activeNode)) {
       this.data.activeNode = nodes[0].id || this.data.root || ''
     }
 
-
     this.data.selectedNodes = new Set(selected)
     this.fire('set-data', { nodes: structuredClone(this.data.nodes) })
   }
 
   setSounds(sounds: Sound[]) {
-    let existingSounds = Array.from(this.data.sounds.values())
+    const { added, removed, updated } = diffIndexed(Array.from(this.data.sounds.values()), sounds, 'id')
 
-    replaceIndexed(existingSounds, sounds, 'id')
+    for (const rem of removed) {
+      this.data.sounds.delete(rem.id)
+      this.data.waves.delete(rem.id)
+    }
 
-    this.data.sounds.clear()
+    for (const add of added) {
+      this.data.sounds.set(add.id, add)
+      const wave = this.data.waves.get(add.id)
+      if (wave) { continue }
 
-    for (const sound of existingSounds) {
-      this.data.sounds.set(sound.id, sound)
+      this.downloadWave(add.id)
+    }
+
+    for (const update of updated) {
+      const source = this.data.sounds.get(update.id)!
+      Object.assign(source, update)
     }
     
     this.fire('set-data', { sounds: structuredClone(this.data.sounds) })
@@ -391,9 +400,9 @@ export class SessionClient extends Evt<SessionClientEvts> {
     return Array.from(soundMap.values())
   }
 
-  async uploadSound(soundFile: File, soundId: Id, name = soundFile.name) {
+  async uploadWave(soundFile: File, soundId: Id, name = soundFile.name) {
 
-    const url = new URL(UPLOAD_SOUND, window.location.origin)
+    const url = new URL(UPLOAD_WAVE, window.location.origin)
     url.searchParams.set('name', name)
     url.searchParams.set('soundId', soundId)
 
@@ -414,6 +423,24 @@ export class SessionClient extends Evt<SessionClientEvts> {
       this.fire('error', [ 'Could not parse upload sound response' ])
     }
 
+  }
+
+  async downloadWave(soundId: Id) {
+    const sound = this.data.sounds.get(soundId)
+    if (!sound) { return }
+
+    const wave = this.data.waves.get(soundId)
+    if (wave) { return }
+
+    const response = await fetch(DOWNLOAD_WAVE.replace(':soundId', sound.id), {})
+
+    try {
+      const blob = await response.blob()
+      const waveFile = new File([ blob ], sound.name)
+      this.data.waves.set(sound.id, waveFile)
+    } catch (err) {
+      this.fire('error', [ (err as Error).message ])
+    }
   }
 
   async createSound(request: CreateSoundRequest['request']): Promise<CreateSoundResponse['response'] | undefined> {

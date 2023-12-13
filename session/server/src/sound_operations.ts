@@ -14,8 +14,9 @@ import {
   UpdateSoundResponse,
   UploadSoundURLParams,
   errorResponse,
-  UPLOAD_SOUND, 
-  UploadSoundResponse 
+  UPLOAD_WAVE, 
+  UploadSoundResponse, 
+  DOWNLOAD_WAVE
 } from '../../../shared/api'
 import Deferred from '../../../shared/deferred'
 
@@ -85,7 +86,7 @@ import mime from 'mime-types'
 
 export const router = express.Router()
 
-router.post(UPLOAD_SOUND, async (req, res: express.Response<UploadSoundResponse | ErrorResponse>) => {
+router.post(UPLOAD_WAVE, async (req, res: express.Response<UploadSoundResponse | ErrorResponse>) => {
   const contentType = req.headers['content-type']
   if (!contentType) {
     res.json(errorResponse([ 'a content-type header must be supplied' ]))
@@ -149,4 +150,45 @@ router.post(UPLOAD_SOUND, async (req, res: express.Response<UploadSoundResponse 
 
 })
 
+router.get(DOWNLOAD_WAVE, (req, res) => {
+  const { soundId } = req.params
+  
+  if (!soundId) {
+    res.writeHead(404, 'No sound ID supplied').end()
+    return
+  }
+
+  const sound = getSound(soundId)
+  if (!sound) {
+    res.writeHead(404, 'Sound ID supplied, but no sound found').end()
+    return
+  }
+
+  const { path: soundPath, size } = sound
+  if (!fs.existsSync(soundPath)) {
+    res.writeHead(404, 'Sound wave file missing').end()
+    return
+  }
+
+  try {
+    const readStream = fs.createReadStream(soundPath)
+    const fileName = soundPath.split(path.sep).at(-1)!
+
+    const mimeType = mime.lookup(fileName)
+    if (mimeType === false) { 
+      res.writeHead(400, 'counld not get MIME type').end() 
+      return
+    }
+    
+    res.writeHead(200, {
+      'Content-Type': mimeType,
+      'Content-Length': size
+    })
+    
+    readStream.pipe(res)
+  } catch (err) {
+    res.writeHead(400, (err as Error).message).end() 
+  }
+
+})
 

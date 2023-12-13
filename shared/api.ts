@@ -78,12 +78,12 @@ export const UNLINK_SOUND_RPC = 'unlink-sound'
 export type UnlinkSoundFromNodeRequest = RPCRequest<typeof UNLINK_SOUND_RPC, { soundId: Id, nodeId?: Id }>
 export type UnlinkSoundFromNodeResponse = RPCResponse 
 
-export const UPLOAD_SOUND = `${API_PREFIX}/sound`
+export const UPLOAD_WAVE = `${API_PREFIX}/wave`
 export type UploadSoundURLParams = { name: string, soundId: string }
 export type UploadSoundResponse = Response<Sound>
+
+export const DOWNLOAD_WAVE = `${API_PREFIX}/wave/:soundId`
 
 export const HOST_INIT_RPC = 'host-init'
 export type HostInitRequest = RPCRequest<typeof HOST_INIT_RPC> 
 export type HostInitResponse = RPCResponse<{ person: Id, name: string, people: Id[] }>
-
-export const CONVERT_SOUND = `${API_PREFIX}/convert`
