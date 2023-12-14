@@ -1,16 +1,16 @@
 import express from 'express' 
 
-import homepage from './homepage'
-import heartbeat from './heartbeat'
-import nodeOperations from './node_operations'
-import { operations as soundOperations, router as soundRouter } from './sound_operations'
+import homepage from './homepage.js'
+import heartbeat from './heartbeat.js'
+import nodeOperations from './node_operations.js'
+import { operations as soundOperations, router as soundRouter } from './sound_operations.js'
 
 import childProcess from 'child_process'
 import path from 'path'
 
 import { WebSocketServer } from 'ws'
-import { WS_PATH } from '../../../shared/api'
-import { RPC, RPCMessageTarget } from '../../../shared/rpc'
+import { WS_PATH } from '../../../shared/api.js'
+import { RPC, RPCMessageTarget } from '../../../shared/rpc.js'
 
 const app = express()
 

@@ -1,5 +1,5 @@
-import { Id, Node, Sound, Timestamp } from './data'
-import { RPCRequest, RPCResponse } from './rpc'
+import { Id, Node, Sound, Timestamp } from './data.js'
+import { RPCRequest, RPCResponse } from './rpc.js'
 
 export const API_PREFIX = '/api/v1'
 export type Response<T = undefined> = {

@@ -10,10 +10,10 @@ import {
   UPDATE_NODE_RPC,
   UpdateNodeRequest,
   UpdateNodeResponse
-} from '../../../shared/api'
+} from '../../../shared/api.js'
 
-import { RPCHostMethod } from '../../../shared/rpc'
-import { createNode, deleteNode, getNode, getNodes, getRootNode, updateNode } from './data_state'
+import { RPCHostMethod } from '../../../shared/rpc.js'
+import { createNode, deleteNode, getNode, getNodes, getRootNode, updateNode } from './data_state.js'
 
 const operations: Record<string, RPCHostMethod> = {
   [ CREATE_NODE_RPC ]: async (req): Promise<CreateNodeResponse['response']> => {

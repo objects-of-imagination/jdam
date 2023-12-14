@@ -1,5 +1,5 @@
 import express from 'express'
-import { HEARTBEAT_PATH, HeartbeatResponse } from '../../../shared/api'
+import { HEARTBEAT_PATH, HeartbeatResponse } from '../../../shared/api.js'
 
 const router = express.Router()
 

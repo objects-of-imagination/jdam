@@ -10,6 +10,7 @@
   },
   "author": "",
   "license": "ISC",
+  "type": "module",
   "devDependencies": {
     "@types/decompress": "^4.2.7",
     "@types/express": "^4.17.21",

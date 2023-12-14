@@ -4,8 +4,8 @@ import { resolve, sep } from 'path'
 import { request } from 'https'
 import { Transform } from 'stream'
 import { spawn } from 'child_process'
-import Deferred from '../../shared/deferred'
-import jdamRoot from '../../shared/jdam_root'
+import Deferred from '../../shared/deferred.js'
+import jdamRoot from '../../shared/jdam_root.js'
 
 export const MACHINE = os.machine()
 export const BIN_DIR = resolve(process.cwd(), 'bin')

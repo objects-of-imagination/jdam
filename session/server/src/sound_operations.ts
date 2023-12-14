@@ -17,11 +17,11 @@ import {
   UPLOAD_WAVE, 
   UploadSoundResponse, 
   DOWNLOAD_WAVE
-} from '../../../shared/api'
-import Deferred from '../../../shared/deferred'
+} from '../../../shared/api.js'
+import Deferred from '../../../shared/deferred.js'
 
-import { RPCHostMethod } from '../../../shared/rpc'
-import { createSound, deleteSound, getSound, getSounds, updateSound } from './data_state'
+import { RPCHostMethod } from '../../../shared/rpc.js'
+import { createSound, deleteSound, getSound, getSounds, updateSound } from './data_state.js'
 
 import fs from 'fs'
 import path from 'path'
@@ -81,8 +81,8 @@ export const operations: Record<string, RPCHostMethod> = {
 }
 
 import express from 'express'
-import { ffmpegConvert } from '../../../ffmpeg/src/convert'
-import mime from 'mime-types'
+import { ffmpegConvert } from '../../../ffmpeg/src/convert.js'
+import mime from 'mime'
 
 export const router = express.Router()
 
@@ -93,7 +93,7 @@ router.post(UPLOAD_WAVE, async (req, res: express.Response<UploadSoundResponse |
     return
   }
 
-  const extension = mime.extension(contentType) 
+  const extension = mime.getExtension(contentType) 
   if (!extension) {
     res.json(errorResponse([ `unable to resolve content-type "${contentType}" to audio file extension` ]))
     return
@@ -174,9 +174,9 @@ router.get(DOWNLOAD_WAVE, (req, res) => {
     const readStream = fs.createReadStream(soundPath)
     const fileName = soundPath.split(path.sep).at(-1)!
 
-    const mimeType = mime.lookup(fileName)
-    if (mimeType === false) { 
-      res.writeHead(400, 'counld not get MIME type').end() 
+    const mimeType = mime.getType(fileName)
+    if (mimeType === null) { 
+      res.writeHead(400, 'could not get MIME type').end() 
       return
     }
     

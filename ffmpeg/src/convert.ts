@@ -1,7 +1,7 @@
-import { Duration } from '../../shared/data'
+import { Duration } from '../../shared/data.js'
 import { Transform } from 'stream'
 
-import { ffmpeg } from './ffmpeg'
+import { ffmpeg } from './ffmpeg.js'
 
 export interface FfmpegTransformParams {
   inputFormat: string

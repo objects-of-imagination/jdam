@@ -1,6 +1,6 @@
 import Crypto from 'crypto'
 import fs from 'fs'
-import { Session, newSession, Node, Id, Sound, newNode, newSound, paredCopy } from '../../../shared/data'
+import { Session, newSession, Node, Id, Sound, newNode, newSound, paredCopy } from '../../../shared/data.js'
 
 export const SESSION: Session = newSession({ id: Crypto.randomUUID() })
 

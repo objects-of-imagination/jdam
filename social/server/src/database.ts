@@ -1,5 +1,5 @@
 import { Surreal } from 'surrealdb.node'
-import Deferred from '../../../shared/deferred'
+import Deferred from '../../../shared/deferred.js'
 import express from 'express' 
 import path from 'path'
 

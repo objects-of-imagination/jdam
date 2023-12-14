@@ -1,11 +1,11 @@
 import express from 'express' 
 
-import homepage from './homepage'
-import heartbeat from './heartbeat'
+import homepage from './homepage.js'
+import heartbeat from './heartbeat.js'
 
 import childProcess from 'child_process'
 import path from 'path'
-import database, { DB_FILE, DB_PASS, DB_USER, connect } from './database'
+import database, { DB_FILE, DB_PASS, DB_USER, connect } from './database.js'
 
 const app = express()
 
