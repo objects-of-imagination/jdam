@@ -16,7 +16,8 @@ import {
   errorResponse,
   UPLOAD_WAVE, 
   UploadSoundResponse, 
-  DOWNLOAD_WAVE
+  DOWNLOAD_WAVE,
+  DOWNLOAD_PCM
 } from '../../../shared/api.js'
 import Deferred from '../../../shared/deferred.js'
 
@@ -81,8 +82,9 @@ export const operations: Record<string, RPCHostMethod> = {
 }
 
 import express from 'express'
-import { ffmpegConvert } from '../../../ffmpeg/src/convert.js'
 import mime from 'mime'
+import { ffmpegConvert, ffmpegPcmPeaks } from '../../../ffmpeg/src/convert.js'
+import { newSound } from '../../../shared/data.js'
 
 export const router = express.Router()
 
@@ -99,21 +101,11 @@ router.post(UPLOAD_WAVE, async (req, res: express.Response<UploadSoundResponse |
     return
   }
 
-  const { name, soundId } = req.query as UploadSoundURLParams
-
-  if (!soundId) {
-    res.json(errorResponse([ 'empty soundId was supplied.' ]))
-    return
-  }
-
-  const existingSound = getSound(soundId)
-  if (!existingSound) { 
-    res.json(errorResponse([ `sound with id "${soundId}" does not exist` ]))
-    return
-  }
+  const { name } = req.query as UploadSoundURLParams
 
   const id = Crypto.randomUUID()
   const filePath = path.resolve(TMP_DIR, `${id}.flac`)
+  const rawPath = path.resolve(TMP_DIR, `${id}.pcm`)
 
   try {
     const ffmpegTransformer = ffmpegConvert({ 
@@ -131,17 +123,39 @@ router.post(UPLOAD_WAVE, async (req, res: express.Response<UploadSoundResponse |
 
     await writeDone.promise
 
+    const ffmpegPcmTransformer = ffmpegConvert({ 
+      inputFormat: 'flac',
+      outputFormat: 's8',
+      channels: 1,
+      codec: 'pcm_u8'
+    })
+
+    const ffmpegPeakConverter = ffmpegPcmPeaks()
+
+    const rawDone = new Deferred<boolean>()
+    const readStream = fs.createReadStream(filePath)
+    const pcmWriteStream = fs.createWriteStream(rawPath)
+
+    pcmWriteStream.once('close', () => { rawDone.resolve(true) })
+    pcmWriteStream.once('error', err => { rawDone.reject(err) })
+
+    readStream.pipe(ffmpegPcmTransformer).pipe(ffmpegPeakConverter).pipe(pcmWriteStream)
+
+    await rawDone.promise
+
     const stats = fs.statSync(filePath)
 
-    existingSound.name = name
-    existingSound.path = filePath
-    existingSound.size = stats.size
-    existingSound.length = 1_000 // TODO: process the sound with ffmpeg and get length in millis
+    const outputSound = newSound({
+      name,
+      path: filePath,
+      size: stats.size,
+      length: -1
+    })
 
     res.json({
       ts: Date.now(),
       result: 'success',
-      data: existingSound
+      data: outputSound
     })
   } catch (err) {
     res.json(errorResponse([ 'sound upload encountered an error', (err as Error).message ])).end()
@@ -182,6 +196,43 @@ router.get(DOWNLOAD_WAVE, (req, res) => {
     
     res.writeHead(200, {
       'Content-Type': mimeType,
+      'Content-Length': size
+    })
+    
+    readStream.pipe(res)
+  } catch (err) {
+    res.writeHead(400, (err as Error).message).end() 
+  }
+
+})
+
+router.get(DOWNLOAD_PCM, (req, res) => {
+  const { soundId } = req.params
+  
+  if (!soundId) {
+    res.writeHead(404, 'No sound ID supplied').end()
+    return
+  }
+
+  const sound = getSound(soundId)
+  if (!sound) {
+    res.writeHead(404, 'Sound ID supplied, but no sound found').end()
+    return
+  }
+
+  const { path: soundPath } = sound
+  const pcmPath = (soundPath.replace(/\.\w+$/, '.pcm'))
+  if (!fs.existsSync(pcmPath)) {
+    res.writeHead(404, 'Sound pcm file missing').end()
+    return
+  }
+  const size = fs.statSync(pcmPath).size
+
+  try {
+    const readStream = fs.createReadStream(pcmPath)
+
+    res.writeHead(200, {
+      'Content-Type': 'application/octet-stream',
       'Content-Length': size
     })
     

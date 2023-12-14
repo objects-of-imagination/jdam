@@ -59,7 +59,7 @@ export function NodeDisplay(props: NodeDisplayProps) {
     >
       <For each={ sounds() }>
         { sound => (
-          <Track node={ props.node } sound={ sound }/>
+          <Track node={ props.node } sound={ sound } path={ sound.path }/>
         )}
       </For>
       <Track node={ props.node }/>

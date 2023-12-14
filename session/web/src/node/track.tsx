@@ -1,12 +1,15 @@
 import { useClient } from '../client_provider'
-import styles from './track.module.css'
 import Deferred from '~shared/deferred'
 import { Node, Sound } from '~shared/data'
 import { Show } from 'solid-js'
+import Waveform from '../waveform'
+
+import styles from './track.module.css'
 
 export interface TrackProps {
   node: Node
   sound?: Sound
+  path?: string
 }
 
 export function Track(props: TrackProps) {
@@ -40,23 +43,18 @@ export function Track(props: TrackProps) {
       const file = await fileSelected.promise
       console.log(file)
 
-      const newSound = await client.createSound({
-        createdBy: client.data.person,
-        nodeId: props.node.id,
-        sound: {
-          name: file.name,
-          size: file.size
-        }
-      })
-      if (!newSound) { return }
-
       try {
-        client.data.waves.set(newSound.id, file)
-        const sound = await client.uploadWave(file, newSound.id, file.name)
-        if (!sound) { throw new Error('sound was not uploaded') }
+        const newSound = await client.createSound({
+          createdBy: client.data.person,
+          nodeId: props.node.id,
+          sound: {
+            name: file.name,
+            size: file.size
+          }
+        }, file)
+        if (!newSound) { return }
       } catch (err) {
         console.log(err)
-        await client.deleteSound({ id: newSound.id })
       }
     } catch (err) {
       // console.log('canceled')
@@ -68,7 +66,7 @@ export function Track(props: TrackProps) {
       <div class={ `flex center ${styles.controls}` }>
         info
       </div>
-      <div class={ `flex center ${styles.waveform}` }>
+      <div class={ `flex center ${styles.waveform} relative` }>
         <Show 
           when={ props.sound }
           fallback={
@@ -79,7 +77,12 @@ export function Track(props: TrackProps) {
             Upload
             </button>
           }>
-          { props.sound!.name }
+          <Show 
+            when={ props.path }
+            fallback=<span>{ props.sound!.name.replace(/\.+\w$/, '') }</span>
+          >
+            <Waveform soundId={ props.sound!.id }/>
+          </Show>
         </Show>
       </div>
       <input 

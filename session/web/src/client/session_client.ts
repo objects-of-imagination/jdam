@@ -7,6 +7,7 @@ import {
   CreateSoundResponse,
   DELETE_NODE_RPC,
   DELETE_SOUND_RPC,
+  DOWNLOAD_PCM,
   DOWNLOAD_WAVE,
   DeleteNodeRequest,
   DeleteNodeResponse,
@@ -45,6 +46,7 @@ export type DataState = {
   nodes: Map<Id, Node>
   sounds: Map<Id, Sound>
   waves: Map<Id, File>
+  pcm: Map<Id, Uint8Array>
   selectedNodes: Set<Id>
   activeNode: Id
   root?: Id
@@ -58,6 +60,7 @@ function createDataState(): DataState {
     nodes: new Map(),
     sounds: new Map(),
     waves: new Map(),
+    pcm: new Map(),
     selectedNodes: new Set(),
     activeNode: '',
     person: 'test',
@@ -182,9 +185,6 @@ export class SessionClient extends Evt<SessionClientEvts> {
     const sounds = await this.getSounds()
     if (sounds) {
       this.data.sounds = new Map(sounds.sounds.map(s => [ s.id, s ]))
-      for (const sound of sounds.sounds) {
-        this.downloadWave(sound.id)
-      }
     }
 
     this.fire('set-data', structuredClone(this.data))
@@ -225,14 +225,11 @@ export class SessionClient extends Evt<SessionClientEvts> {
     for (const rem of removed) {
       this.data.sounds.delete(rem.id)
       this.data.waves.delete(rem.id)
+      this.data.pcm.delete(rem.id)
     }
 
     for (const add of added) {
       this.data.sounds.set(add.id, add)
-      const wave = this.data.waves.get(add.id)
-      if (wave) { continue }
-
-      this.downloadWave(add.id)
     }
 
     for (const update of updated) {
@@ -240,7 +237,7 @@ export class SessionClient extends Evt<SessionClientEvts> {
       Object.assign(source, update)
     }
     
-    this.fire('set-data', { sounds: structuredClone(this.data.sounds) })
+    this.fire('set-data', { sounds: structuredClone(this.data.sounds), waves: structuredClone(this.data.waves), pcm: structuredClone(this.data.pcm) })
   }
 
   async heartbeat(): Promise<Result> {
@@ -400,11 +397,10 @@ export class SessionClient extends Evt<SessionClientEvts> {
     return Array.from(soundMap.values())
   }
 
-  async uploadWave(soundFile: File, soundId: Id, name = soundFile.name) {
+  private async uploadWave(soundFile: File, name = soundFile.name) {
 
     const url = new URL(UPLOAD_WAVE, window.location.origin)
     url.searchParams.set('name', name)
-    url.searchParams.set('soundId', soundId)
 
     const response = await fetch(url, {
       method: 'POST',
@@ -430,7 +426,7 @@ export class SessionClient extends Evt<SessionClientEvts> {
     if (!sound) { return }
 
     const wave = this.data.waves.get(soundId)
-    if (wave) { return }
+    if (wave) { return wave }
 
     const response = await fetch(DOWNLOAD_WAVE.replace(':soundId', sound.id), {})
 
@@ -438,14 +434,47 @@ export class SessionClient extends Evt<SessionClientEvts> {
       const blob = await response.blob()
       const waveFile = new File([ blob ], sound.name)
       this.data.waves.set(sound.id, waveFile)
+      return waveFile
     } catch (err) {
       this.fire('error', [ (err as Error).message ])
     }
   }
 
-  async createSound(request: CreateSoundRequest['request']): Promise<CreateSoundResponse['response'] | undefined> {
+  async downloadPcm(soundId: Id) {
+    const sound = this.data.sounds.get(soundId)
+    if (!sound) { return }
+
+    const pcm = this.data.pcm.get(soundId)
+    if (pcm) { return pcm }
+
+    const response = await fetch(DOWNLOAD_PCM.replace(':soundId', sound.id), {})
+
     try {
+      const pcmData = await response.arrayBuffer()
+      const byteData = new Uint8Array(pcmData)
+      this.data.pcm.set(sound.id, byteData)
+      return byteData
+    } catch (err) {
+      this.fire('error', [ (err as Error).message ])
+    }
+  }
+
+  async createSound(request: CreateSoundRequest['request'], waveFile: File): Promise<CreateSoundResponse['response'] | undefined> {
+    try {
+      const newSound = await this.uploadWave(waveFile, waveFile.name)
+      if (!newSound) {
+        throw [ 'there was an error uploading the file' ]
+      }
+
+      request.sound =  Object.assign({}, request.sound, newSound)
+
       const result = await this.rpc.send<CreateSoundRequest, CreateSoundResponse>('create-sound', request, true)
+      if (!result) {
+        throw [ 'no sound was created' ]
+      }
+
+      this.data.waves.set(result.id, waveFile)
+
       await this.syncSounds()
       return result
     } catch (err) {

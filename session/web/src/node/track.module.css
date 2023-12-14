@@ -14,5 +14,7 @@
 }
 
 .waveform {
-  grid-column: 2 / -1
+  grid-column: 2 / -1;
+  align-self: stretch;
+  justify-self: stretch;
 }

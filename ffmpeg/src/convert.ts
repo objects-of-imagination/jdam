@@ -11,6 +11,7 @@ export interface FfmpegTransformParams {
   start?: Duration
   end?: Duration
   codec?: string
+  addArgs?: string[]
 }
 
 export function ffmpegConvert ({
@@ -20,32 +21,39 @@ export function ffmpegConvert ({
   channels = 2,
   start,
   end,
-  codec
+  codec,
+  addArgs = []
 }: FfmpegTransformParams) {
 
   /* default is signed PCM little-endian data */
 
-  const args = [ 
-    '-ar', sampleRate, /* set the bit rate */
-    '-ac', channels, /* set the number of channels */
-    '-f', outputFormat,
-    'pipe:1' // write directly to stdout, which we will pipe to outputStream
-  ]
+  const args: (string | number)[] = []
 
-  args.unshift('-i', '-') // stdin
-  args.unshift('-f', inputFormat) // need to tell the input stream what format to be in
-
-  if (end) {
-    args.unshift('-to', `${end}ms`)
-  }
+  args.push('-f', inputFormat) // need to tell the input stream what format to be in
+  args.push('-i', '-') // stdin
 
   if (start) {
-    args.unshift('-ss', `${start}ms`)
+    args.push('-ss', `${start}ms`)
+  }
+
+  if (end) {
+    args.push('-to', `${end}ms`)
   }
 
   if (codec) {
-    args.unshift('-acodec', codec)
+    args.push('-acodec', codec)
   }
+
+  args.push(...addArgs)
+
+  args.push(...[
+    '-ar', sampleRate, /* set the bit rate */
+    '-ac', channels, /* set the number of channels */
+    '-f', outputFormat,
+    'pipe:1'
+  ]) // write directly to stdout, which we will pipe to outputStream
+
+  // console.log(args)
 
   const ffmpegProcess = ffmpeg(args.map(value => String(value)))
 
@@ -83,4 +91,33 @@ export function ffmpegConvert ({
 
   return result
 
+}
+
+export function ffmpegPcmPeaks(inputRate = 48000, outputRate = 40) {
+  let currentFrame: number[] = []
+  const frameWidth = Math.floor(inputRate / outputRate)
+  return new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      let start = 0 
+      let end = Math.min(frameWidth - currentFrame.length, chunk.length)
+      for (let f = currentFrame.length; f < chunk.length; f += frameWidth) {
+        if (start < end) {
+          currentFrame.push(...chunk.subarray(start, end))
+        }
+        if (currentFrame.length === frameWidth) {
+          let max = currentFrame[0]
+          let min = currentFrame[0]
+          for (let i = 1; i < currentFrame.length; i++) {
+            max = Math.max(max, currentFrame[i])
+            min = Math.min(min, currentFrame[i])
+          }
+          this.push(new Uint8Array([ max - min ]))
+          currentFrame = []
+        }
+        start = end
+        end = Math.min(end + frameWidth, chunk.length)
+      }
+      callback()
+    }
+  })
 }
