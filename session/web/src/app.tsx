@@ -1,8 +1,8 @@
 import { ClientProvider } from './client_provider'
 import { NodeLanes } from './node_lanes'
-import { Theme } from './theme/theme'
+import { Theme } from '~comps/theme'
 
-import '~shared/app.css'
+import '~shared/assets/app.css'
 import styles from './app.module.css'
 
 function App() {

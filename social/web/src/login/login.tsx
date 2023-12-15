@@ -38,7 +38,7 @@ export function Login() {
           class={ `${styles.side} overflow hidden` }
           speedMultiplier={ 2 }
         />
-        <div class={ `overflow hidden rounded ${styles.inputs}` }>
+        <div class={ `overflow hidden rounded box-shadow ${styles.inputs}` }>
           <FormField name="email" class={ styles.email }>
             <label>Email</label>
             <ValidIndication enabled={ signup() } validation={ onInput }>

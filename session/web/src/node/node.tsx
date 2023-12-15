@@ -51,7 +51,7 @@ export function NodeDisplay(props: NodeDisplayProps) {
   return (
     <div 
       tabIndex={ 0 }
-      class={ `position relative rounded ${styles.node}` } 
+      class={ `position relative rounded box-shadow ${styles.node}` } 
       style={ {
         'grid-column': `${props.length + props.index + 1} / span 1`
       } }
@@ -89,7 +89,7 @@ export function AddNodeDisplay(props: AddNodeDisplayProps) {
 
   return (
     <button
-      class={ `flex center rounded ${styles.node}` } 
+      class={ `flex center rounded box-shadow ${styles.node}` } 
       onClick={ handleOnClick }
     >
        New Idea 

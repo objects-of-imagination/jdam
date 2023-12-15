@@ -23,13 +23,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
+    "noFallthroughCasesInSwitch": true
 
-    "paths": {
-      "~shared/*": [ "../../shared/*" ],
-      "~comps/*": [ "../../comps/*" ]
-    }
-  },
-  "include": [ "src" ],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  }
 }

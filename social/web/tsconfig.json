@@ -26,7 +26,8 @@
     "noFallthroughCasesInSwitch": true,
 
     "paths": {
-      "~shared/*": [ "../../shared/*" ]
+      "~shared/*": [ "../../shared/*" ],
+      "~comps/*": [ "../../comps/*" ]
     }
   },
   "include": ["src", "../server/src/api.ts", "../../assets" ],

@@ -4,13 +4,18 @@
   grid-column: 1 / -1;
   align-items: center;
   justify-items: center;
+  height: var(--track-height);
+  background-color: color-mix(in hsl, var(--grey90) 30%, transparent);
+  margin-bottom: 4px;
+  padding: calc(var(--padding) / 2) 0;
 
+  border: 1px solid var(--grey70);
 }
 
 .controls {
   grid-column: 1 / 2;
   padding: var(--padding);
-  width: var(--track-height);
+  width: 8rem;
 }
 
 .waveform {

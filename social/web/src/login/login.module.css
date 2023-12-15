@@ -33,7 +33,6 @@
   margin: 1rem;
 
   background-color: color-mix(in srgb, transparent 5%, var(--default-bg));
-  box-shadow: 0 12px 32px 0 rgb(0 0 0 / 50%);
 }
 
 .username {

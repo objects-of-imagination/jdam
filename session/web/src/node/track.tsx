@@ -33,6 +33,7 @@ export function Track(props: TrackProps) {
 
       fileSelected.resolve(input.files[0])
     }, { once: true })
+
     input.addEventListener('cancel', () => {
       fileSelected.reject(new Error('canceled'))
     }, { once: true })
@@ -41,7 +42,6 @@ export function Track(props: TrackProps) {
 
     try  {
       const file = await fileSelected.promise
-      console.log(file)
 
       try {
         const newSound = await client.createSound({
@@ -62,7 +62,7 @@ export function Track(props: TrackProps) {
   }
 
   return (
-    <div class={ styles.track }>
+    <div class={ `rounded ${styles.track}` }>
       <div class={ `flex center ${styles.controls}` }>
         info
       </div>

@@ -3,8 +3,8 @@ import { Login } from './login/login'
 import { UserDashboard } from './dash/dash'
 import { ClientProvider } from './client_provider'
 
-import '~shared/app.css'
-import { Theme } from './theme/theme'
+import '~shared/assets/app.css'
+import { Theme } from '~comps/theme'
 
 function App() {
 

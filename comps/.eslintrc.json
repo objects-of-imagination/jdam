@@ -1,0 +1,7 @@
+{
+  "env": {
+    "browser": true
+  },
+  "plugins": ["solid"],
+  "extends": ["plugin:solid/typescript"]
+}

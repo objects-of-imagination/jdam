@@ -6,6 +6,8 @@
 .nodeLane {
   padding: var(--padding);
   min-height: 33vh;
+
+  overflow-x: clip;
   
   &:not(:last-child) {
     border-bottom: 1px solid var(--grey70);

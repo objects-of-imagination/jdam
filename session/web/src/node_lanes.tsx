@@ -50,7 +50,7 @@ export interface NodeLaneProps {
 export function NodeLane(props: NodeLaneProps) {
 
   return (
-    <div class={ `flex center ${styles.nodeLane} overflow hidden` }>
+    <div class={ `flex center ${styles.nodeLane}` }>
       <div class={ styles.container } style={ {
         'grid-template-columns': `repeat(${props.nodes.length + 1}, var(--node-width))`,
         '--offset-index': String(-props.selectedIndex)

@@ -3,8 +3,8 @@ import { formId, stateError } from './form'
 
 import styles from './form_field.module.css'
 
-import eye from '~shared/eye.svg'
-import checkOrX from '~shared/check_or_x.svg'
+import eye from '~shared/assets/eye.svg'
+import checkOrX from '~shared/assets/check_or_x.svg'
 
 export interface FormFieldProps extends JSX.HTMLAttributes<HTMLDivElement> {
   name: string 
