@@ -1,4 +1,4 @@
-import { Id, Node, Sound, Timestamp } from './data.js'
+import { Id, Node, Person, Sound, Timestamp } from './data.js'
 import { RPCRequest, RPCResponse } from './rpc.js'
 
 export const API_PREFIX = '/api/v1'
@@ -33,6 +33,24 @@ export type HeartbeatResponse = Response
 export type Result = 'success' | 'failure'
 
 export const PERSON_OPERATIONS_PATH = `${API_PREFIX}/person`
+export const CREATE_PERSON_PATH = `${PERSON_OPERATIONS_PATH}/create` 
+export type CreatePersonRequestParams = {
+  username: string,
+  email: string,
+  password: string
+}
+export type CreatePersonResponse = Response<Person> | ErrorResponse
+
+export const LOGIN_PERSON_PATH = `${PERSON_OPERATIONS_PATH}/login` 
+export type LoginPersonRequestParams = {
+  email: string,
+  password: string
+}
+export type LoginPersonResponse = Response<Person> | ErrorResponse
+
+export const LOGOUT_PERSON_PATH = `${PERSON_OPERATIONS_PATH}/logout` 
+export type LogoutPersonRequestParams = { id: string }
+export type LogoutPersonResponse = Response | ErrorResponse
 
 export const SESSION_CONNECT_RPC = 'session-connect'
 export type SessionConnectRequest = RPCRequest<typeof SESSION_CONNECT_RPC, { person: Id }>

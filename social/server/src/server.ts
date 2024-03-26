@@ -3,9 +3,12 @@ import express from 'express'
 import homepage from './homepage.js'
 import heartbeat from './heartbeat.js'
 
+import './keys.js'
+
 import childProcess from 'child_process'
 import path from 'path'
-import database, { DB_FILE, DB_PASS, DB_USER, connect } from './database.js'
+import { DB_FILE, DB_PASS, DB_USER, connect } from './database.js'
+import personOperations from './person_operations.js'
 
 const app = express()
 
@@ -49,7 +52,7 @@ process.on('exit', () => {
 const PORT = 3000
 
 app.use(heartbeat)
-app.use(database)
+app.use(personOperations)
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`)

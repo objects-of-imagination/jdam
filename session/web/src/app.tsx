@@ -1,6 +1,7 @@
 import { ClientProvider } from './client_provider'
 import { NodeLanes } from './node_lanes'
 import { Theme } from '~comps/theme'
+import { SoundList } from './sound_list'
 
 import '~shared/assets/app.css'
 import styles from './app.module.css'
@@ -10,9 +11,7 @@ function App() {
     <ClientProvider>
       <Theme/>
       <div class={ `fixed full ${styles.app}` }>
-        <div class={ `relative ${styles.side}` }>
-          Side 
-        </div>
+        <SoundList/>
         <div class={ `relative ${styles.main}` }>
           <NodeLanes/>
         </div>

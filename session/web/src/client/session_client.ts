@@ -97,7 +97,7 @@ export class SessionClient extends Evt<SessionClientEvts> {
 
     const target: RPCMessageTarget = {
       send: async (data: unknown) => { 
-        await this.connected.promise
+        await this.connected
         ws.send(JSON.stringify(data))
       },
       onReceive: handler => {
@@ -140,7 +140,7 @@ export class SessionClient extends Evt<SessionClientEvts> {
 
     const hostTarget: RPCMessageTarget = {
       send: async (data: unknown) => { 
-        await this.connected.promise
+        await this.connected
         if (!window.top || window.top === window) { return }
         window.top.postMessage(data, window.location.origin)
       },
@@ -515,6 +515,15 @@ export class SessionClient extends Evt<SessionClientEvts> {
       await this.createNode({ createdBy: this.data.person, parent: node.id })
       await this.createNode({ createdBy: this.data.person, parent: node.id  })
       node = await this.createNode({ createdBy: this.data.person, parent: node.id })
+    }
+  }
+
+  async getPerson(id: Id) {
+    try {
+      const person = await this.hostRpc.send('get-person', id)
+      console.log(person)
+    } catch (err) {
+      this.fire('error', err as string[])
     }
   }
 

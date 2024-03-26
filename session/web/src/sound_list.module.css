@@ -1,0 +1,41 @@
+.soundList {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background-color: var(--grey80);
+  z-index: 100;
+  display: grid;
+  width: 0;
+  overflow-x: clip;
+
+  transition: width 300ms var(--ease-out);
+
+  &.expanded {
+    width: 44ch;
+  }
+}
+
+
+.content {
+  padding: var(--padding);
+  overflow-y: auto;
+}
+
+.soundListItem {
+  display: grid;
+  grid-template-areas: "name      unlinked"
+                       "createdby     ."  ;
+  grid-template-columns: 1fr max-content;
+
+  & .name {
+    grid-area: name
+  }
+
+  & .unlinked {
+    grid-area: unlinked
+  }
+
+  & .createdby {
+    grid-area: createdby
+  }
+}

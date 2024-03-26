@@ -1,4 +1,4 @@
-export default class Deferred<T, E = unknown> {
+export default class Deferred<T, E = unknown> implements PromiseLike<T> {
 
   private _resolve!: (value: T | PromiseLike<T>) => void
   private _reject!: (err: E) => void
@@ -6,6 +6,13 @@ export default class Deferred<T, E = unknown> {
 
   constructor() {
     this.init()
+  }
+
+  then<TResult1 = T, TResult2 = E>(
+    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null | undefined,
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null | undefined
+  ): PromiseLike<TResult1 | TResult2> {
+    return this.promise.then(onfulfilled).catch(onrejected)
   }
 
   init() {

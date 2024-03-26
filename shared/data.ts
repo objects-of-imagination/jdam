@@ -13,6 +13,7 @@ export interface Person {
   email: string
   username: string
   password: string
+  salt: string
   created: Timestamp
   settings: PersonSettings
 
@@ -26,6 +27,7 @@ export function newPerson(person: Partial<Person>): Person {
     email: '',
     username: '',
     password: '',
+    salt: '',
     created: Date.now(),
     settings: {
       theme: 'default',

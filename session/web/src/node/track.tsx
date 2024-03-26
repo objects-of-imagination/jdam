@@ -41,7 +41,7 @@ export function Track(props: TrackProps) {
     input.click()
 
     try  {
-      const file = await fileSelected.promise
+      const file = await fileSelected
 
       try {
         const newSound = await client.createSound({

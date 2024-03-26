@@ -164,3 +164,14 @@ button {
 .box-shadow {
   box-shadow: 0 12px 32px rgb(0 0 0 / 50%)
 }
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+
+  li {
+    padding: var(--padding);
+    border-bottom: 1px solid var(--grey70);
+  }
+}

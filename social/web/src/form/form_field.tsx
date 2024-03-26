@@ -26,6 +26,7 @@ export function FormField(props: FormFieldProps) {
     const input = ref.querySelector('input')
     if (input) {
       input.setAttribute('id', formId(props.name))
+      input.setAttribute('name', props.name)
       input.className = `rounded no-border ${styles.input}`
     }
     
@@ -140,7 +141,7 @@ export function ValidIndication(props: ParentProps<ValidIndicationProps>) {
       setState(input.validity.valid ? 'valid' : 'invalid')
     }
 
-    input.addEventListener('input', onInput)
+    input.addEventListener('input', () => onInput())
 
     onInput()
   })

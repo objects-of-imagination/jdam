@@ -121,7 +121,7 @@ router.post(UPLOAD_WAVE, async (req, res: express.Response<UploadSoundResponse |
 
     req.pipe(ffmpegTransformer).pipe(writeStream)
 
-    await writeDone.promise
+    await writeDone
 
     const ffmpegPcmTransformer = ffmpegConvert({ 
       inputFormat: 'flac',
@@ -141,7 +141,7 @@ router.post(UPLOAD_WAVE, async (req, res: express.Response<UploadSoundResponse |
 
     readStream.pipe(ffmpegPcmTransformer).pipe(ffmpegPeakConverter).pipe(pcmWriteStream)
 
-    await rawDone.promise
+    await rawDone
 
     const stats = fs.statSync(filePath)
 

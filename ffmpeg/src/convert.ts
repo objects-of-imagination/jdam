@@ -100,7 +100,7 @@ export function ffmpegPcmPeaks(inputRate = 48000, outputRate = 40) {
     transform(chunk: Buffer, _encoding, callback) {
       let start = 0 
       let end = Math.min(frameWidth - currentFrame.length, chunk.length)
-      for (let f = currentFrame.length; f < chunk.length; f += frameWidth) {
+      for (let f = 0; f < chunk.length;) {
         if (start < end) {
           currentFrame.push(...chunk.subarray(start, end))
         }
@@ -114,6 +114,7 @@ export function ffmpegPcmPeaks(inputRate = 48000, outputRate = 40) {
           this.push(new Uint8Array([ max - min ]))
           currentFrame = []
         }
+        f += end - start
         start = end
         end = Math.min(end + frameWidth, chunk.length)
       }

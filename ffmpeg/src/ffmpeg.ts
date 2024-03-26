@@ -55,7 +55,7 @@ async function downloadFfmpeg() {
 
   req.end()
 
-  await downloadDone.promise
+  await downloadDone
   process.stdout.write('\n')
   
   console.log('\x1b[32mdownload ffmpeg - done\x1b[0m')
@@ -72,7 +72,7 @@ async function untarFfmpeg() {
   ], { cwd: BIN_DIR, stdio: [ 'ignore', 'inherit', 'inherit' ] })
   untarProc.on('exit', () => { untarDone.resolve(true) })
 
-  await untarDone.promise
+  await untarDone
   
   console.log('\x1b[32muntar ffmpeg - done\x1b[0m')
 

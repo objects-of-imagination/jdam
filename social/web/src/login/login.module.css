@@ -6,7 +6,7 @@
                        "side email ."
                        "side username ."
                        "side password ."
-                       "side confirm ."
+                       "side error ."
                        "side signin ."
                        "side . .";
   grid-template-columns: 1fr max-content 1fr;
