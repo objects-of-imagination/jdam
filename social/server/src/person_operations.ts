@@ -1,6 +1,7 @@
 import express from 'express' 
 import crypto from 'crypto'
 import { 
+  AUTH_COOKIE_NAME,
   CREATE_PERSON_PATH,
   CreatePersonRequestParams,
   CreatePersonResponse,
@@ -14,7 +15,7 @@ import { CONNECTED } from './database.js'
 import { Person, newPerson } from '../../../shared/data.js'
 
 import jwt from 'jsonwebtoken'
-import { AUTH_COOKIE_NAME, PRIVATE_KEY } from './keys.js'
+import { PRIVATE_KEY } from './keys.js'
 
 const router = express.Router()
 router.use(express.json())

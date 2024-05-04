@@ -6,6 +6,10 @@ import crypto from 'crypto'
 
 export const DB_USER = 'admin'
 export const DB_PASS = btoa('auth-jdam-db')
+
+console.log(DB_USER)
+console.log(DB_PASS)
+
 export const DB_NAMESPACE = 'jdam'
 export const DB_DATABASE = 'jdam'
 export const DB_FILE = path.resolve(process.cwd(), '../../database')

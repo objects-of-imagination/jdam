@@ -1,4 +1,6 @@
 import { 
+  AUTH_CHECK_PATH,
+  AUTH_JWT,
   CREATE_PERSON_PATH,
   CreatePersonRequestParams,
   CreatePersonResponse,
@@ -11,10 +13,41 @@ import {
   isErrorResponse
 } from '~shared/api'
 import { Person } from '~shared/data'
+import { getJdamCookie } from './jdam_cookie'
+import { validateJdamToken } from '~shared/validate_token'
 
 export class SocialClient {
 
+  expirationTimer = -1
+
   async init() {
+    window.addEventListener('pageshow', async () => {
+      const token = getJdamCookie()
+      let valid = false
+      if (token) {
+        try { 
+          valid = validateJdamToken(token)
+        } catch (err) {
+          // do nothing
+        }
+      }
+
+      if (valid) {
+        if (window.location.pathname === '/') {
+          window.location.assign('dash')
+        } else {
+          window.clearTimeout(this.expirationTimer)
+          this.expirationTimer = window.setTimeout(() => {
+            window.location.assign('/')
+          }, ((token!.iat + 86400) * 1000) - Date.now())
+        }
+      } else {
+        if (window.location.pathname !== '/') {
+          window.location.assign('/')
+        }
+      }
+    })
+
     return true
   }
 
@@ -82,6 +115,38 @@ export class SocialClient {
     window.location.assign('dash')
 
     return data
+  }
+
+  async checkAuth() {
+    try {
+      const response = await fetch(AUTH_CHECK_PATH, {
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+      if (response.status !== 200) {
+        throw new Error('Unauthorized')
+      }
+
+      const tokenData = await response.json() as Partial<AUTH_JWT>
+
+      if (!tokenData) {
+        throw new Error('No token data')
+      }
+
+      const { id, iat: issuedAt } = tokenData
+      if (!id || typeof issuedAt !== 'number' || Number.isNaN(issuedAt)) {
+        throw new Error('Malformed token')
+      }
+
+      if (Date.now() - (issuedAt * 1000) > 24 * 60 * 60 * 1000) {
+        throw new Error('Token expired')
+      }
+
+    } catch (err) {
+      console.error(err)
+    }
+    return false
   }
 
 }

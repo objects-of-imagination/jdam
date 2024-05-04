@@ -32,6 +32,15 @@ export type HeartbeatResponse = Response
 
 export type Result = 'success' | 'failure'
 
+export const AUTH_CHECK_PATH = '/a'
+export const AUTH_COOKIE_NAME = 'jdam-auth'
+export const AUTH_HEADER = 'X-Jdam-Auth'
+export type AUTH_JWT = {
+  id: string,
+  iat: number
+  age: number
+}
+
 export const PERSON_OPERATIONS_PATH = `${API_PREFIX}/person`
 export const CREATE_PERSON_PATH = `${PERSON_OPERATIONS_PATH}/create` 
 export type CreatePersonRequestParams = {

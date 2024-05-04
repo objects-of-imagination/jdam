@@ -1,8 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
-import { RequestParamHandler } from 'express'
+import express, { Request, Response, NextFunction, RequestParamHandler } from 'express'
 import cookieParser from 'cookie-parser'
+import { AUTH_COOKIE_NAME, AUTH_CHECK_PATH, AUTH_HEADER, AUTH_JWT } from '../../../shared/api.js'
+import { validateJdamToken } from '../../../shared/validate_token.js'
+import jwt from 'jsonwebtoken'
 
 export const PRIVATE_KEY_PATH = path.resolve(process.cwd(), 'private.key')
 export const PUBLIC_KEY_PATH = path.resolve(process.cwd(), 'public.pem')
@@ -24,25 +27,50 @@ if (!fs.existsSync(PRIVATE_KEY_PATH) || !fs.existsSync(PUBLIC_KEY_PATH)) {
   PUBLIC_KEY = fs.readFileSync(PUBLIC_KEY_PATH, 'utf8')
 }
 
-export const AUTH_COOKIE_NAME = 'jdam-auth'
-
+const router = express.Router()
 const cookies = cookieParser()
 
-export function withAuth(...[ req, res, next ]: Parameters<RequestParamHandler>) {
-  cookies(req, res, next)
+router.use(cookies)
 
-  console.log(req.url)
-  if (!req.url || req.url === '/') { 
-    next()
-    return
+router.get(AUTH_CHECK_PATH, withAuth((token, _req, res) => {
+  res.status(200)
+  res.contentType('application/json')
+  res.send(token)
+  res.end()
+}))
+
+export default router
+
+export function withAuth(handler: (token: AUTH_JWT, req: Request, res: Response, next: NextFunction) => void) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    cookies(req, res, next)
+
+    let token = req.cookies[AUTH_COOKIE_NAME]
+    if (!token) {
+      token = req.headers[AUTH_HEADER]
+    }
+    if (!token) {
+      res.status(401)
+      res.statusMessage = 'No token'
+      res.end()
+      return
+    }
+
+    const decoded = jwt.verify(token, PUBLIC_KEY) as Partial<AUTH_JWT>
+    try {
+      validateJdamToken(decoded)
+    } catch (err) {
+      res.status(401)
+      res.statusMessage = (err as Error).message
+      res.end()
+      return
+    }
+    
+    if (!decoded.age) {
+      decoded.age = 86400
+    }
+
+    handler(decoded as AUTH_JWT, req, res, next)
   }
-
-  const token = req.cookies[AUTH_COOKIE_NAME]
-  console.log(token)
-  if (!token) {
-    res.redirect(301, '/')
-    return
-  }
-
-  next()
 }
+

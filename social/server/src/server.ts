@@ -3,7 +3,7 @@ import express from 'express'
 import homepage from './homepage.js'
 import heartbeat from './heartbeat.js'
 
-import './keys.js'
+import checkAuth from './keys.js'
 
 import childProcess from 'child_process'
 import path from 'path'
@@ -11,6 +11,8 @@ import { DB_FILE, DB_PASS, DB_USER, connect } from './database.js'
 import personOperations from './person_operations.js'
 
 const app = express()
+
+app.use(checkAuth)
 
 if (process.env.NODE_ENV === 'dev') {
   const vite = childProcess.spawn('npm', [ 'run', 'dev' ], { 
@@ -32,7 +34,7 @@ const surreal = childProcess.spawn('surreal', [
   '--pass',
   DB_PASS,
   '--bind',
-  '127.0.0.1:8000',
+  '0.0.0.0:8000',
   process.env.NODE_ENV === 'dev' ? 'memory' : `file:${DB_FILE}`
 ])
 
